@@ -1,0 +1,268 @@
+{
+  "name": "FolhaMedicao",
+  "type": "object",
+  "properties": {
+    "numero_fm": {
+      "type": "string",
+      "description": "Número da Folha de Medição gerado automaticamente"
+    },
+    "empreiteira": {
+      "type": "string",
+      "default": "CENEGED",
+      "description": "Nome da empreiteira"
+    },
+    "tecnico_light": {
+      "type": "string",
+      "description": "Técnico da Light responsável"
+    },
+    "endereco": {
+      "type": "string",
+      "description": "Endereço da obra"
+    },
+    "tipo_processo": {
+      "type": "string",
+      "enum": [
+        "Expansão",
+        "Manutenção"
+      ],
+      "description": "Tipo do processo"
+    },
+    "caracteristica": {
+      "type": "string",
+      "enum": [
+        "Programada",
+        "Emergencial"
+      ],
+      "description": "Característica da obra"
+    },
+    "data_obra": {
+      "type": "string",
+      "format": "date",
+      "description": "Data da obra"
+    },
+    "hora_acionada": {
+      "type": "string",
+      "description": "Hora de acionamento"
+    },
+    "hora_inicio": {
+      "type": "string",
+      "description": "Hora de início dos trabalhos"
+    },
+    "hora_fim": {
+      "type": "string",
+      "description": "Hora de fim dos trabalhos"
+    },
+    "municipio": {
+      "type": "string",
+      "description": "Município da obra"
+    },
+    "circuito": {
+      "type": "string",
+      "description": "Circuito da obra"
+    },
+    "projeto": {
+      "type": "string",
+      "description": "Código do projeto"
+    },
+    "ordem_servico": {
+      "type": "string",
+      "description": "Ordem de serviço (8 dígitos iniciados com 9)"
+    },
+    "ordem_manutencao": {
+      "type": "string",
+      "description": "Ordem de manutenção (10 dígitos iniciados com 2040)"
+    },
+    "reserva": {
+      "type": "string",
+      "description": "Código de reserva"
+    },
+    "ntc": {
+      "type": "string",
+      "description": "Número NTC"
+    },
+    "pi": {
+      "type": "string",
+      "description": "Código PI"
+    },
+    "ks": {
+      "type": "string",
+      "description": "Código KS"
+    },
+    "cf": {
+      "type": "string",
+      "description": "Código CF"
+    },
+    "zona": {
+      "type": "string",
+      "description": "Zona da obra"
+    },
+    "servicos": {
+      "type": "array",
+      "description": "Lista de serviços executados",
+      "items": {
+        "type": "object",
+        "properties": {
+          "descricao": {
+            "type": "string"
+          },
+          "centro": {
+            "type": "string"
+          },
+          "codigo_servico": {
+            "type": "string"
+          },
+          "unidade": {
+            "type": "string"
+          },
+          "dispendio": {
+            "type": "string"
+          },
+          "preco": {
+            "type": "number"
+          },
+          "quantidade": {
+            "type": "number"
+          },
+          "total_valor": {
+            "type": "number"
+          },
+          "observacao": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "equipes": {
+      "type": "array",
+      "description": "Lista de equipes envolvidas",
+      "items": {
+        "type": "object",
+        "properties": {
+          "codigo_equipe": {
+            "type": "string"
+          },
+          "encarregado": {
+            "type": "string"
+          },
+          "motorista": {
+            "type": "string"
+          },
+          "eletricistas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "equipamentos_instalados": {
+      "type": "array",
+      "description": "Equipamentos instalados na obra",
+      "items": {
+        "type": "object",
+        "properties": {
+          "serial": {
+            "type": "string"
+          },
+          "numero_lp": {
+            "type": "string"
+          },
+          "fabricante": {
+            "type": "string"
+          },
+          "capacidade": {
+            "type": "string"
+          },
+          "data_fabricacao": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      }
+    },
+    "equipamentos_retirados": {
+      "type": "array",
+      "description": "Equipamentos retirados da obra",
+      "items": {
+        "type": "object",
+        "properties": {
+          "serial": {
+            "type": "string"
+          },
+          "numero_lp": {
+            "type": "string"
+          },
+          "fabricante": {
+            "type": "string"
+          },
+          "capacidade": {
+            "type": "string"
+          },
+          "data_fabricacao": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      }
+    },
+    "materiais_instalados": {
+      "type": "array",
+      "description": "Materiais instalados na obra",
+      "items": {
+        "type": "object",
+        "properties": {
+          "descricao": {
+            "type": "string"
+          },
+          "lote": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "number"
+          },
+          "origem": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "materiais_retirados": {
+      "type": "array",
+      "description": "Materiais retirados da obra",
+      "items": {
+        "type": "object",
+        "properties": {
+          "descricao": {
+            "type": "string"
+          },
+          "lote": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "number"
+          },
+          "origem": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "rascunho",
+        "finalizada",
+        "aprovada"
+      ],
+      "default": "rascunho",
+      "description": "Status da folha de medição"
+    }
+  },
+  "required": [
+    "numero_fm",
+    "tecnico_light",
+    "endereco",
+    "tipo_processo"
+  ]
+}
