@@ -12,7 +12,7 @@ import ServicosStep from "../components/nova-folha/ServicosStep";
 import EquipeSection from "../components/folha/EquipeSection";
 import EquipamentosSection from "../components/folha/EquipamentosSection";
 import MateriaisSection from "../Components/folha/MateriaisSection";
-import Revisao from "../components/nova-folha/Revisao";
+import Revisao from "../Components/nova-folha/Revisao";
 
 export default function NovaFolha() {
   const navigate = useNavigate();
