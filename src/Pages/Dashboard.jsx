@@ -4,7 +4,7 @@ import { BarChart, TrendingUp, Zap } from "lucide-react";
 
 import { getServicos } from "@/components/api";
 
-import MetricasCard from "../components/dashboard/MetricasCard";
+import MetricasCard from "../Components/dashboard/MetricasCard";
 import GraficoTipoProcesso from "../Components/dashboard/GraficoTipoProcesso";
 import TabelaRecentes from "../Components/dashboard/TabelaRecentes";
 import PrevisaoFaturamento from "../components/dashboard/PrevisaoFaturamento";
