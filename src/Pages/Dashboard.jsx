@@ -4,10 +4,10 @@ import { BarChart, TrendingUp, Zap } from "lucide-react";
 
 import { getServicos } from "@/components/api";
 
-import MetricasCard from "../Components/dashboard/MetricasCard";
-import GraficoTipoProcesso from "../Components/dashboard/GraficoTipoProcesso";
-import TabelaRecentes from "../Components/dashboard/TabelaRecentes";
-import PrevisaoFaturamento from "../Components/dashboard/PrevisaoFaturamento";
+import MetricasCard from "../components/dashboard/MetricasCard";
+import GraficoTipoProcesso from "../components/dashboard/GraficoTipoProcesso";
+import TabelaRecentes from "../components/dashboard/TabelaRecentes";
+import PrevisaoFaturamento from "../components/dashboard/PrevisaoFaturamento";
 
 export default function Dashboard() {
   const [servicos, setServicos] = useState([]);

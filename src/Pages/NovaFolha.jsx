@@ -7,12 +7,12 @@ import { ArrowLeft, FileText, ArrowRight, Save } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import StepIndicator from "../components/nova-folha/StepIndicator";
-import DadosGerais from "../Components/nova-folha/DadosGerais";
+import DadosGerais from "../components/nova-folha/DadosGerais";
 import ServicosStep from "../components/nova-folha/ServicosStep";
 import EquipeSection from "../components/folha/EquipeSection";
 import EquipamentosSection from "../components/folha/EquipamentosSection";
-import MateriaisSection from "../Components/folha/MateriaisSection";
-import Revisao from "../Components/nova-folha/Revisao";
+import MateriaisSection from "../components/folha/MateriaisSection";
+import Revisao from "../components/nova-folha/Revisao";
 
 export default function NovaFolha() {
   const navigate = useNavigate();

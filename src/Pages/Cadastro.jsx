@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import FormularioCadastro from "../Components/cadastro/FormularioCadastro";
+import FormularioCadastro from "../components/cadastro/FormularioCadastro";
 
 export default function Cadastro() {
   const handleSuccess = () => {
