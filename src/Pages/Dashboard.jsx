@@ -4,7 +4,7 @@ import { BarChart, TrendingUp, Zap } from "lucide-react";
 
 import { getServicos } from "@/components/api";
 
-import MetricasCards from "../components/dashboard/MetricasCards";
+import MetricasCard from "../components/dashboard/MetricasCard";
 import GraficoTipoProcesso from "../Components/dashboard/GraficoTipoProcesso";
 import TabelaRecentes from "../Components/dashboard/TabelaRecentes";
 import PrevisaoFaturamento from "../components/dashboard/PrevisaoFaturamento";
@@ -59,7 +59,7 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <MetricasCards servicos={servicos} isLoading={isLoading} />
+            <MetricasCard servicos={servicos} isLoading={isLoading} />
           </motion.div>
 
           {/* Previsão de Faturamento */}
