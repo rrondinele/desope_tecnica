@@ -7,7 +7,7 @@ import { getServicos } from "@/components/api";
 import MetricasCard from "../Components/dashboard/MetricasCard";
 import GraficoTipoProcesso from "../Components/dashboard/GraficoTipoProcesso";
 import TabelaRecentes from "../Components/dashboard/TabelaRecentes";
-import PrevisaoFaturamento from "../components/dashboard/PrevisaoFaturamento";
+import PrevisaoFaturamento from "../Components/dashboard/PrevisaoFaturamento";
 
 export default function Dashboard() {
   const [servicos, setServicos] = useState([]);
@@ -20,7 +20,7 @@ export default function Dashboard() {
   const loadServicos = async () => {
     setIsLoading(true);
     try {
-      const data = await getServicos(); // Changed from ServicosEletricos.list
+      const data = await getServicos(); 
       setServicos(data);
     } catch (error) {
       console.error("Erro ao carregar serviços:", error);
