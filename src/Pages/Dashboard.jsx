@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { BarChart, TrendingUp, Zap } from "lucide-react";
-
 import { getServicos } from "@/components/api";
-
 import MetricasCard from "../components/dashboard/MetricasCard";
 import GraficoTipoProcesso from "../components/dashboard/GraficoTipoProcesso";
 import TabelaRecentes from "../components/dashboard/TabelaRecentes";
