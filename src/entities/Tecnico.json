@@ -1,0 +1,19 @@
+{
+  "name": "Tecnico",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string"
+    },
+    "especialidade": {
+      "type": "string"
+    },
+    "ativo": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "nome"
+  ]
+}

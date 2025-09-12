@@ -1,0 +1,23 @@
+{
+  "name": "TipoServico",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string"
+    },
+    "unidade": {
+      "type": "string"
+    },
+    "valor_unitario": {
+      "type": "number"
+    },
+    "ativo": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "nome",
+    "valor_unitario"
+  ]
+}
