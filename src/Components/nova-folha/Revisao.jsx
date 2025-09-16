@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Save, AlertTriangle, Building, FileCog, Users, Wrench, Box, DollarSign, ArrowLeft, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
-import { createFolha } from "@/services/storage"; // IMPORTANTE: Importa nossa função do storage
+import { createPageUrl } from "@/utils";
+import { FolhaMedicao } from "@/entities/FolhaMedicao";
 
 
 const InfoItem = ({ label, value }) => (
@@ -32,7 +33,7 @@ export default function Revisao({ data, onPrevious }) { // Removemos onSave e is
   const [isSaving, setIsSaving] = useState(false); // Agora o estado é interno
   const navigate = useNavigate();
 
-  const handleSubmit = (finalStatus) => {
+  const handleSubmit = async (finalStatus) => {
     setIsSaving(true);
 
     const finalData = {
@@ -52,13 +53,13 @@ export default function Revisao({ data, onPrevious }) { // Removemos onSave e is
     };
 
     // Usa a função do localStorage em vez de uma prop
-    createFolha(finalData);
+    await FolhaMedicao.create(finalData);
 
    // Simula um tempo de salvamento e redireciona
     setTimeout(() => {
       alert('Folha salva com sucesso no armazenamento local!');
       setIsSaving(false);
-      navigate('/lista-folhas');
+      navigate(createPageUrl('ListaFolhas'));
     }, 500); // Meio segundo para o usuário ver o feedback
   };
   
