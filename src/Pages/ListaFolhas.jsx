@@ -404,7 +404,7 @@ export default function ListaFolhas() {
         </motion.div>
 
         <Card className="mb-6 shadow-lg border-0">
-          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-[1fr_220px_220px] gap-4 items-center">
             <Input placeholder="Buscar por Número FM, Projeto..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="md:col-span-1"/>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -415,7 +415,12 @@ export default function ListaFolhas() {
                 ))}
               </SelectContent>
             </Select>
-             <Button onClick={handleExportToCSV} variant="outline" disabled={filteredFolhas.length === 0}>
+             <Button
+                onClick={handleExportToCSV}
+                variant="outline"
+                disabled={filteredFolhas.length === 0}
+                className="justify-self-start md:justify-self-end"
+              >
                 <FileDown className="w-4 h-4 mr-2" />
                 Exportar para Excel
             </Button>

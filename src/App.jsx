@@ -1,5 +1,6 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+//import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./Layout";
 import Cadastro from "@/Pages/Cadastro";
 import Dashboard from "@/Pages/Dashboard";
@@ -13,7 +14,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} /> {/* Rota raiz opcional */}
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/dashboardfinanceiro" element={<DashboardFinanceiro />} />
+        <Route path="/dashboard-financeiro" element={<DashboardFinanceiro />} />
         <Route path="/cadastro" element={<Cadastro />} />
         <Route path="/nova-folha" element={<NovaFolha />} />
         <Route path="/lista-folhas" element={<ListaFolhas />} />
