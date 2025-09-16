@@ -1,50 +1,117 @@
-// A "chave" da nossa "tabela" de folhas no localStorage
 const FOLHAS_STORAGE_KEY = 'folhasDeMedicaoApp:folhas';
 
-// Função interna para salvar o array completo de folhas.
-function _saveAllFolhas(folhas) {
-  localStorage.setItem(FOLHAS_STORAGE_KEY, JSON.stringify(folhas));
+function createMemoryStorage() {
+  const store = new Map();
+
+  return {
+    getItem(key) {
+      return store.has(key) ? store.get(key) : null;
+    },
+    setItem(key, value) {
+      store.set(key, String(value));
+    },
+    removeItem(key) {
+      store.delete(key);
+    },
+    clear() {
+      store.clear();
+    },
+  };
+}
+
+function createSafeStorage() {
+  if (typeof window === 'undefined') {
+    return createMemoryStorage();
+  }
+
+  const tryStorage = (candidate, label) => {
+    if (!candidate) {
+      return null;
+    }
+
+    try {
+      const testKey = `${FOLHAS_STORAGE_KEY}__test__`;
+      candidate.setItem(testKey, 'ok');
+      candidate.removeItem(testKey);
+      return candidate;
+    } catch (error) {
+      console.warn(`[storage] ${label} indisponivel.`, error);
+      return null;
+    }
+  };
+
+  const local = tryStorage(window.localStorage, 'localStorage');
+  if (local) {
+    return local;
+  }
+
+  const session = tryStorage(window.sessionStorage, 'sessionStorage');
+  if (session) {
+    return session;
+  }
+
+  console.warn('[storage] Usando armazenamento em memoria como fallback.');
+  return createMemoryStorage();
+}
+
+const storage = createSafeStorage();
+
+function readAllFolhas() {
+  const raw = storage.getItem(FOLHAS_STORAGE_KEY);
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    console.warn('[storage] Dados corrompidos, limpando armazenamento.', error);
+    storage.removeItem(FOLHAS_STORAGE_KEY);
+    return [];
+  }
+}
+
+function saveAllFolhas(folhas) {
+  storage.setItem(FOLHAS_STORAGE_KEY, JSON.stringify(folhas));
 }
 
 /**
- * Busca todas as folhas de medição salvas.
+ * Busca todas as folhas de medicao salvas.
  * @returns {Array} Um array com as folhas.
  */
 export function getFolhas() {
-  const data = localStorage.getItem(FOLHAS_STORAGE_KEY);
-  return data ? JSON.parse(data) : [];
+  return readAllFolhas();
 }
 
 /**
- * Cria uma nova folha de medição na lista.
+ * Cria uma nova folha de medicao na lista.
  * @param {Object} novaFolha - O objeto da nova folha.
  */
 export function createFolha(novaFolha) {
   const folhasAtuais = getFolhas();
   const novaLista = [...folhasAtuais, novaFolha];
-  _saveAllFolhas(novaLista);
+  saveAllFolhas(novaLista);
 }
 
 /**
- * Atualiza uma folha de medição existente pelo seu ID.
+ * Atualiza uma folha de medicao existente pelo seu ID.
  * @param {string | number} folhaId - O ID da folha a ser atualizada.
  * @param {Object} updates - Um objeto com os campos a serem atualizados.
  */
 export function updateFolha(folhaId, updates) {
   const folhasAtuais = getFolhas();
-  const novaLista = folhasAtuais.map(folha => {
+  const novaLista = folhasAtuais.map((folha) => {
     if (folha.id === folhaId) {
-      // Se encontrar a folha, mescla as atualizações com os dados existentes
       return { ...folha, ...updates, updated_date: new Date().toISOString() };
     }
     return folha;
   });
-  _saveAllFolhas(novaLista);
+  saveAllFolhas(novaLista);
 }
 
 /**
- * Limpa todos os dados (útil para testes).
+ * Limpa todos os dados (util para testes).
  */
 export function clearAllFolhas() {
-  localStorage.removeItem(FOLHAS_STORAGE_KEY);
+  storage.removeItem(FOLHAS_STORAGE_KEY);
 }

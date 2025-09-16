@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "start": "npm run dev",
     "dev": "vite",
     "build": "vite build",
     "tw": "tailwindcss -i ./src/index.css -o ./dist/output.css --watch",

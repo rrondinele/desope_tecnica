@@ -1,0 +1,14 @@
+{
+  "materiaisInstalados": {
+    "descricao": "A2",
+    "lote": "B2",
+    "quantidade": "C2",
+    "origem": "D2"
+  },
+  "materiaisRetirados": {
+    "descricao": "A10",
+    "lote": "B10",
+    "quantidade": "C10",
+    "origem": "D10"
+  }
+}

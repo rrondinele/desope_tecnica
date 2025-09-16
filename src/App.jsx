@@ -6,6 +6,7 @@ import Dashboard from "@/Pages/Dashboard";
 import NovaFolha from "@/Pages/NovaFolha";
 import ListaFolhas from "@/Pages/ListaFolhas";
 import DashboardFinanceiro from "./Pages/DashboardFinanceiro";
+// import LocalStorageTest from "./Teste/LocalStorageTest"; // Importe o componente de teste
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/cadastro" element={<Cadastro />} />
         <Route path="/nova-folha" element={<NovaFolha />} />
         <Route path="/lista-folhas" element={<ListaFolhas />} />
+        {/* <Route path="/teste-localstorage" element={<LocalStorageTest />} /> Rota para o componente de teste */}
       </Routes>
     </Layout>
   );

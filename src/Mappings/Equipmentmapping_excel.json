@@ -1,0 +1,16 @@
+{
+  "equipamentosInstalados": {
+    "serial": "A2",
+    "numero_lp": "B2",
+    "fabricante": "C2",
+    "capacidade": "D2",
+    "data_fabricacao": "E2"
+  },
+  "equipamentosRetirados": {
+    "serial": "A10",
+    "numero_lp": "B10",
+    "fabricante": "C10",
+    "capacidade": "D10",
+    "data_fabricacao": "E10"
+  }
+}

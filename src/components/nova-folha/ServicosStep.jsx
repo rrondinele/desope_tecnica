@@ -7,115 +7,74 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { DollarSign, Plus, Trash2, Calculator } from "lucide-react";
 
-const servicosDisponiveis = [
-  {
-    codigo: "001",
-    descricao: "Instalação de Poste de Concreto 9m",
-    unidade: "UN",
-    valor_unitario: 450.00
-  },
-  {
-    codigo: "002",
-    descricao: "Instalação de Transformador 15kVA",
-    unidade: "UN",
-    valor_unitario: 1250.00
-  },
-  {
-    codigo: "003",
-    descricao: "Ligação Nova BT Monofásica",
-    unidade: "UN",
-    valor_unitario: 85.50
-  },
-  {
-    codigo: "004",
-    descricao: "Manutenção Preventiva Rede BT",
-    unidade: "M",
-    valor_unitario: 25.00
-  },
-  {
-    codigo: "005",
-    descricao: "Substituição de Cabo Multiplexado",
-    unidade: "M",
-    valor_unitario: 35.75
-  }
-];
+import {
+  servicosDisponiveis,
+  selecionarServico,
+  calcularValorTotal,
+  criarServico,
+  removerServico as removerServicoLista,
+  resetarServico,
+  calcularValorServico,
+  validarServico
+} from "@/rules/servicosStepRules";
 
 export default function ServicosStep({ data, updateData }) {
-  const [novoServico, setNovoServico] = useState({
-    codigo: '',
-    descricao: '',
-    unidade: '',
-    valor_unitario: 0,
-    quantidade: 1,
-  });
-
+  const [novoServico, setNovoServico] = useState(resetarServico());
   const [valorTotalGeral, setValorTotalGeral] = useState(0);
 
-  // Calcula o valor total sem causar loop
-  const calcularValorTotal = useCallback(() => {
-    return data.servicos?.reduce((sum, s) => sum + (s.valor_total || 0), 0) || 0;
-  }, [data.servicos]);
+  const calcularTotal = useCallback(() => calcularValorTotal(data.servicos), [data.servicos]);
 
-  // Atualiza o valor total apenas quando necessário
   useEffect(() => {
-    const total = calcularValorTotal();
+    const total = calcularTotal();
     setValorTotalGeral(total);
-    
-    // Atualiza o pai apenas se o valor total mudou
     if (total !== data.valor_total) {
       updateData({ valor_total: total });
     }
-  }, [data.servicos, data.valor_total, calcularValorTotal, updateData]);
+  }, [data.servicos, data.valor_total, calcularTotal, updateData]);
 
   const handleServicoSelect = (descricao) => {
-    const servicoSelecionado = servicosDisponiveis.find(s => s.descricao === descricao);
+    const servicoSelecionado = selecionarServico(descricao);
     if (servicoSelecionado) {
       setNovoServico(prev => ({
         ...prev,
         ...servicoSelecionado,
-        quantidade: prev.quantidade || 1 // Mantém a quantidade atual
+        quantidade: prev.quantidade || 1
       }));
     }
   };
-  
+
   const handleQuantidadeChange = (quantidade) => {
-    const qtd = parseFloat(quantidade) || 0;
+    const qtd = Math.max(0, parseFloat(parseFloat(quantidade).toFixed(2))) || 0;
     setNovoServico(prev => ({
       ...prev,
-      quantidade: qtd,
+      quantidade: qtd
     }));
   };
 
-  const adicionarServico = () => {
-    if (novoServico.descricao && novoServico.quantidade > 0) {
-      const servicoParaAdicionar = {
-        ...novoServico,
-        id: Date.now(), // ID único para a lista na UI
-        valor_total: novoServico.valor_unitario * novoServico.quantidade
-      };
+  const adicionarNovoServico = () => {
 
-      const servicos = [...(data.servicos || []), servicoParaAdicionar];
+    try {
+      validarServico(novoServico, data.servicos);
+      if (!novoServico.descricao || novoServico.quantidade <= 0) return;
+      if (data.servicos?.some(s => s.descricao === novoServico.descricao)) return;
+
+      const novo = criarServico(novoServico);
+      const servicos = [...(data.servicos || []), novo];
       updateData({ servicos });
-
-      // Reseta o formulário mantendo a quantidade (para UX)
-      setNovoServico({
-        codigo: '', 
-        descricao: '', 
-        unidade: '', 
-        valor_unitario: 0, 
-        quantidade: novoServico.quantidade // Mantém a quantidade para próximo serviço
-      });
+      setNovoServico(resetarServico(novoServico.quantidade));
+    }
+    catch (error) {
+      alert(error.message);
     }
   };
 
   const removerServico = (id) => {
-    const servicos = data.servicos.filter((s) => s.id !== id);
+    const servicos = removerServicoLista(id, data.servicos);
     updateData({ servicos });
   };
 
   return (
     <div className="space-y-8">
-      {/* Adicionar Novo Serviço */}
       <Card className="bg-white border-slate-200 shadow-sm">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-semibold text-slate-900">Adicionar Serviço</CardTitle>
@@ -123,7 +82,7 @@ export default function ServicosStep({ data, updateData }) {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div className="space-y-2 md:col-span-2">
-              <Label className="text-slate-700 font-medium">Descrição do Serviço</Label>
+              <Label className="text-slate-700 font-medium">Descrição do Serviço<span className="text-red-600"> *</span></Label>
               <Select value={novoServico.descricao} onValueChange={handleServicoSelect}>
                 <SelectTrigger className="border-slate-200 bg-white">
                   <SelectValue placeholder="Selecione o serviço" />
@@ -137,9 +96,9 @@ export default function ServicosStep({ data, updateData }) {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">Qtd.</Label>
+              <Label className="text-slate-700 font-medium">Qtd.<span className="text-red-600"> *</span></Label>
               <Input
                 type="number"
                 min="0.01"
@@ -154,28 +113,27 @@ export default function ServicosStep({ data, updateData }) {
               <Label className="text-slate-700 font-medium">Valor Unit. (R$)</Label>
               <Input
                 type="text"
-                value={novoServico.valor_unitario.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                value={novoServico.valor_unitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 disabled
                 className="border-slate-200 bg-slate-100 font-mono"
               />
             </div>
           </div>
 
-          {/* Preview do valor total do serviço atual */}
           {novoServico.descricao && novoServico.quantidade > 0 && (
             <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-slate-600">Valor total deste serviço:</span>
                 <span className="font-semibold text-green-700">
-                  R$ {(novoServico.valor_unitario * novoServico.quantidade).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                  R$ {calcularValorServico(novoServico).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
               </div>
             </div>
           )}
-          
+
           <div className="mt-4">
-            <Button 
-              onClick={adicionarServico} 
+            <Button
+              onClick={adicionarNovoServico}
               disabled={!novoServico.descricao || novoServico.quantidade <= 0}
               className="w-full bg-gray-900 hover:bg-gray-800 text-white disabled:bg-slate-400 disabled:cursor-not-allowed"
             >
@@ -186,7 +144,6 @@ export default function ServicosStep({ data, updateData }) {
         </CardContent>
       </Card>
 
-      {/* Lista de Serviços */}
       <Card className="bg-white border-slate-200 shadow-sm">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-semibold text-slate-900">
@@ -231,7 +188,7 @@ export default function ServicosStep({ data, updateData }) {
                   ))}
                 </TableBody>
               </Table>
-              
+
               <div className="p-4 bg-slate-100 border-t border-slate-200 flex justify-between items-center">
                 <span className="text-lg font-semibold text-slate-900">Valor Total Geral:</span>
                 <div className="flex items-center gap-2 text-2xl font-bold text-green-700">

@@ -1,0 +1,23 @@
+{
+  "data.numero_fm": "A2",
+  "data.empreiteira": "B2",
+  "data.tecnico_light": "C2",
+  "data.endereco": "D2",
+  "data.tipo_processo": "E2",
+  "data.caracteristica": "F2",
+  "data.data_obra": "G2",
+  "data.hora_acionada": "H2",
+  "data.hora_inicio": "I2",
+  "data.hora_fim": "J2",
+  "data.municipio": "K2",
+  "data.circuito": "L2",
+  "data.projeto": "M2",
+  "data.ordem_servico": "N2",
+  "data.ordem_manutencao": "O2",
+  "data.reserva": "P2",
+  "data.ntc": "Q2",
+  "data.pi": "R2",
+  "data.ks": "S2",
+  "data.cf": "T2",
+  "data.zona": "U2"
+}

@@ -404,21 +404,68 @@ export default function ListaFolhas() {
         </motion.div>
 
         <Card className="mb-6 shadow-lg border-0">
-          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-            <Input placeholder="Buscar por Número FM, Projeto..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="md:col-span-1"/>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Status</SelectItem>
-                {Object.entries(statusConfig).map(([key, {label}]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-             <Button onClick={handleExportToCSV} variant="outline" disabled={filteredFolhas.length === 0}>
+          <CardContent className="p-6">
+            {/* Layout Desktop - tudo em uma linha */}
+            <div className="hidden lg:flex items-center gap-4 w-full">
+              <Input
+                placeholder="Buscar por Número FM, Projeto..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1"
+              />
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Todos os Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  {Object.entries(statusConfig).map(([key, { label }]) => (
+                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleExportToCSV}
+                variant="outline"
+                disabled={filteredFolhas.length === 0}
+                className="whitespace-nowrap"
+              >
                 <FileDown className="w-4 h-4 mr-2" />
                 Exportar para Excel
-            </Button>
+              </Button>
+            </div>
+
+            {/* Layout Mobile/Tablet - elementos empilhados */}
+            <div className="lg:hidden space-y-4">
+              <Input
+                placeholder="Buscar por Número FM, Projeto..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
+              <div className="flex gap-4">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Todos os Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Status</SelectItem>
+                    {Object.entries(statusConfig).map(([key, { label }]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleExportToCSV}
+                  variant="outline"
+                  disabled={filteredFolhas.length === 0}
+                  className="shrink-0"
+                >
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Exportar
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { createServico } from "@/components/api";
-import { formatCurrency, formatDate } from "@/Components/formatters";
+import { formatCurrency, formatDate } from "@/components/formatters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

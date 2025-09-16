@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Common files
+.DS_Store
+Thumbs.db
+
