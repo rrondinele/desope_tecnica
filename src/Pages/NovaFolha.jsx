@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ArrowLeft, FileText, ArrowRight, Save } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { hasSupabase } from "@/services/supabaseClient";
 import StepIndicator from "../components/nova-folha/StepIndicator";
 import DadosGerais from "../components/nova-folha/DadosGerais";
 import ServicosStep from "../components/nova-folha/ServicosStep";
@@ -160,6 +161,13 @@ export default function NovaFolha() {
       } else {
         await FolhaMedicao.create(cleanedPayload);
       }
+      try {
+        if (hasSupabase()) {
+          alert("Folha salva com sucesso no Supabase!");
+        } else {
+          alert("Folha salva com sucesso no armazenamento local (Supabase desativado).");
+        }
+      } catch {}
       navigate(createPageUrl("ListaFolhas"));
     } catch (error) {
       console.error("Erro ao salvar folha:", error);

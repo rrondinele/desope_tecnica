@@ -1,3 +1,6 @@
+console.log('[TESTE VITE] URL:', import.meta.env.VITE_SUPABASE_URL);
+console.log('[TESTE VITE] Chave Existe?:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+
 import React from "react";
 //import { Routes, Route } from "react-router-dom";
 import { Routes, Route, Navigate } from "react-router-dom";

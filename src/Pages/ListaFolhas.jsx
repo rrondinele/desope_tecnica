@@ -113,7 +113,7 @@ export default function ListaFolhas() {
     }
 
     await updateStatus(selectedFolha, 'aguardando_aprovacao', {
-      data_envio: new Date(envioData.data_envio).toISOString(),
+      data_envio: `${envioData.data_envio} ${new Date().toTimeString().slice(0,5)}`,
       metodo_envio: envioData.metodo_envio,
       observacoes: `Enviado via ${envioData.metodo_envio} em ${format(new Date(envioData.data_envio), 'dd/MM/yyyy')}`
     });
@@ -123,7 +123,7 @@ export default function ListaFolhas() {
   };
 
   const handleProcessarRetorno = async () => {
-    const dataRetorno = { data_retorno_distribuidora: new Date(retornoData.data_retorno).toISOString() };
+    const dataRetorno = { data_retorno_distribuidora: retornoData.data_retorno };
 
     if (retornoData.parecer === 'aprovado') {
       await updateStatus(selectedFolha, 'aprovado', {
@@ -253,7 +253,8 @@ export default function ListaFolhas() {
   const handleRegistrarPagamento = async () => {
     const pagamentoPayload = {
       numero_pagamento: pagamentoData.numero_pagamento,
-      data_pagamento: new Date(pagamentoData.data_pagamento).toISOString(),
+      // manter como YYYY-MM-DD para coluna DATE
+      data_pagamento: pagamentoData.data_pagamento,
       observacoes: `Pagamento registrado - NF: ${pagamentoData.numero_pagamento}`
     };
     await updateStatus(selectedFolha, 'pago', pagamentoPayload);
@@ -682,10 +683,10 @@ export default function ListaFolhas() {
               <div>
                 <label className="text-sm font-semibold mb-2 block">Método de Envio *</label>
                 <Select value={envioData.metodo_envio} onValueChange={(v) => setEnvioData({...envioData, metodo_envio: v})}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecione o método" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper">
                     <SelectItem value="E-mail">
                       <div className="flex items-center gap-2">
                         <Mail className="w-4 h-4" />
@@ -703,8 +704,8 @@ export default function ListaFolhas() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowEnvioModal(false)}>Cancelar</Button>
-              <Button onClick={handleEnviarFolha} className="bg-green-600 hover:bg-green-700">
+              <Button type="button" variant="outline" onClick={() => setShowEnvioModal(false)}>Cancelar</Button>
+              <Button type="button" onClick={handleEnviarFolha} className="bg-green-600 hover:bg-green-700">
                 Confirmar Envio
               </Button>
             </DialogFooter>
@@ -826,7 +827,7 @@ export default function ListaFolhas() {
               />
             </div>
             <DialogFooter>
-              <Button onClick={handleRegistrarPagamento}>Registrar</Button>
+              <Button type="button" onClick={handleRegistrarPagamento}>Registrar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -855,8 +856,8 @@ export default function ListaFolhas() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCancelamentoModal(false)}>Voltar</Button>
-              <Button onClick={handleCancelarFolha} className="bg-red-600 hover:bg-red-700">
+              <Button type="button" variant="outline" onClick={() => setShowCancelamentoModal(false)}>Voltar</Button>
+              <Button type="button" onClick={handleCancelarFolha} className="bg-red-600 hover:bg-red-700">
                 Confirmar Cancelamento
               </Button>
             </DialogFooter>
