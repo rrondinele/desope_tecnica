@@ -79,7 +79,7 @@ export default function ListaFolhas() {
     if (searchTerm) {
       filtered = filtered.filter(folha =>
         folha.numero_fm?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        folha.projeto?.toLowerCase().includes(searchTerm.toLowerCase())
+        folha.projeto?.toLowerCase().includes(searchTerm.toLowerCase()) 
       );
     }
     if (statusFilter !== "all") {
@@ -330,6 +330,17 @@ export default function ListaFolhas() {
     return "";
   };
 
+  // Helper para contagem no resumo
+  const getPrazoStatus = (folha) => {
+    if (folha.status !== 'pendente' || !folha.data_obra) return 'none';
+    const hoje = new Date();
+    const dueDate = addBusinessDays(new Date(folha.data_obra), 2);
+    const diasRestantes = differenceInBusinessDays(dueDate, hoje);
+    if (diasRestantes < 0) return 'atrasado';
+    if (diasRestantes === 0) return 'vence_hoje';
+    return 'outros';
+  };
+
   const renderStatusBadge = (status) => {
     const config = statusConfig[status];
     if(!config) return null;
@@ -339,26 +350,41 @@ export default function ListaFolhas() {
 
   const renderActionButtons = (folha) => (
     <div className="flex gap-1">
-      <Button variant="ghost" size="icon" onClick={() => { setSelectedFolha(folha); setShowDetailsModal(true); }}>
+      <Button
+        variant="outline"
+        size="icon"
+        title="Detalhes"
+        onClick={() => { setSelectedFolha(folha); setShowDetailsModal(true); }}
+      >
         <Eye className="w-4 h-4 text-blue-600" />
       </Button>
       {folha.status === 'pendente' && (
-        <Button variant="ghost" size="icon" onClick={() => { setSelectedFolha(folha); setShowEnvioModal(true); }}>
+        <Button
+          variant="outline"
+          size="icon"
+          title="Enviar para aprovação"
+          onClick={() => { setSelectedFolha(folha); setShowEnvioModal(true); }}
+        >
           <Send className="w-4 h-4 text-green-600" />
         </Button>
       )}
       {folha.status === 'aguardando_aprovacao' && (
-        <Button variant="ghost" size="icon" onClick={() => { setSelectedFolha(folha); setShowRetornoModal(true); }}>
+        <Button
+          variant="outline"
+          size="icon"
+          title="Registrar retorno"
+          onClick={() => { setSelectedFolha(folha); setShowRetornoModal(true); }}
+        >
           <Edit className="w-4 h-4 text-orange-600" />
         </Button>
       )}
       {folha.status === 'aprovado' && (
-        <Button variant="ghost" size="icon" onClick={() => { setSelectedFolha(folha); setShowPagamentoModal(true); }}>
+        <Button variant="outline" size="icon" title="Registrar pagamento" onClick={() => { setSelectedFolha(folha); setShowPagamentoModal(true); }}>
           <DollarSign className="w-4 h-4 text-purple-600" />
         </Button>
       )}
        {['pendente', 'aguardando_aprovacao'].includes(folha.status) && (
-        <Button variant="ghost" size="icon" onClick={() => { setSelectedFolha(folha); setShowCancelamentoModal(true); }}>
+        <Button variant="outline" size="icon" title="Cancelar folha" onClick={() => { setSelectedFolha(folha); setShowCancelamentoModal(true); }}>
           <XCircle className="w-4 h-4 text-red-600" />
         </Button>
       )}
@@ -398,47 +424,82 @@ export default function ListaFolhas() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+      {/*<div className="max-w-7xl mx-auto"> */}  
+      <div className="mx-auto w-full max-w-[1800px]">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Lista de Folhas de Medição</h1>
         </motion.div>
 
         <Card className="mb-6 shadow-lg border-0">
-          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-[1fr_220px_220px] gap-4 items-center">
-            <Input placeholder="Buscar por Número FM, Projeto..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="md:col-span-1"/>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Status</SelectItem>
-                {Object.entries(statusConfig).map(([key, {label}]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-             <Button
+          <CardContent className="p-3 flex flex-col md:flex-row md:flex-nowrap items-stretch md:items-center gap-3 md:gap-4">
+            <Input
+              placeholder="Buscar por Número FM, Projeto..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              fullWidth={false}
+              className="flex-1 min-w-0"
+            />
+            <div className="w-full md:w-[420px] shrink-0">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  {Object.entries(statusConfig).map(([key, { label }]) => (
+                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full md:w-[420px] shrink-0">
+              <Button
                 onClick={handleExportToCSV}
                 variant="outline"
                 disabled={filteredFolhas.length === 0}
-                className="justify-self-start md:justify-self-end"
+                className="w-full"
               >
                 <FileDown className="w-4 h-4 mr-2" />
                 Exportar para Excel
-            </Button>
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
         <Card className="shadow-lg border-0">
           <CardContent className="pt-4">
+            <div className="flex items-center justify-between mb-4 px-2">
+              <p className="text-sm text-gray-600">
+                {filteredFolhas.length} folha(s) encontrada(s)
+                {searchTerm && ` para "${searchTerm}"`}
+              </p>
+              <div className="flex items-center gap-4 text-sm text-gray-700">
+                <span className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  Pendentes totais: {filteredFolhas.filter(f => f.status === 'pendente').length}
+                </span>
+                <span className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  Atrasadas: {filteredFolhas.filter(f => getPrazoStatus(f) === 'atrasado').length}
+                </span>
+                <span className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  Vencem Hoje: {filteredFolhas.filter(f => getPrazoStatus(f) === 'vence_hoje').length}
+                </span>
+              </div>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Número FM</TableHead>
-                  <TableHead>Data Obra</TableHead>
-                  <TableHead>Data Envio</TableHead>
-                  <TableHead>Data Retorno</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Prazo</TableHead>
-                  <TableHead>Ações</TableHead>
+                  <TableHead className="w-64">Número FM</TableHead>
+                  <TableHead className="w-64">Projeto</TableHead>
+                  <TableHead className="w-64">Tipo Processo</TableHead>
+                  <TableHead className="w-64">Município</TableHead>
+                  <TableHead className="w-64">Data Obra</TableHead>
+                  <TableHead className="w-64">Data Envio</TableHead>
+                  <TableHead className="w-64">Data Retorno</TableHead>
+                  <TableHead className="w-80">Status</TableHead>
+                  <TableHead className="w-64">Prazo</TableHead>
+                  <TableHead className="w-64">Valor</TableHead>
+                  <TableHead className="w-64">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -452,6 +513,9 @@ export default function ListaFolhas() {
                   return (
                     <TableRow key={folha.id} className={prazoInfo.className}>
                       <TableCell className="font-mono font-semibold">{folha.numero_fm}</TableCell>
+                      <TableCell>{folha.projeto}</TableCell>
+                      <TableCell>{folha.tipo_processo}</TableCell>
+                      <TableCell>{folha.municipio}</TableCell>
                       <TableCell>{folha.data_obra ? format(new Date(folha.data_obra), 'dd/MM/yy') : '-'}</TableCell>
                       <TableCell>
                         <div className="flex flex-col">
@@ -473,6 +537,9 @@ export default function ListaFolhas() {
                             {prazoInfo.text}
                           </div>
                         )}
+                      </TableCell>
+                      <TableCell className="text-left font-semibold">
+                        {(folha.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </TableCell>
                       <TableCell>{renderActionButtons(folha)}</TableCell>
                     </TableRow>
@@ -593,7 +660,7 @@ export default function ListaFolhas() {
 
         {/* Modal de Envio */}
         <Dialog open={showEnvioModal} onOpenChange={setShowEnvioModal}>
-          <DialogContent>
+          <DialogContent className="max-w-md sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-green-600">
                 <Send className="w-5 h-5" />
@@ -646,7 +713,7 @@ export default function ListaFolhas() {
 
         {/* Modal de Retorno */}
         <Dialog open={showRetornoModal} onOpenChange={setShowRetornoModal}>
-          <DialogContent>
+          <DialogContent className="max-w-md sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Processar Retorno da Distribuidora</DialogTitle>
               <DialogDescription>
@@ -742,7 +809,7 @@ export default function ListaFolhas() {
 
         {/* Modal de Pagamento */}
         <Dialog open={showPagamentoModal} onOpenChange={setShowPagamentoModal}>
-          <DialogContent>
+          <DialogContent className="max-w-md sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Registrar Pagamento</DialogTitle>
             </DialogHeader>
@@ -766,7 +833,7 @@ export default function ListaFolhas() {
 
         {/* Modal de Cancelamento */}
         <Dialog open={showCancelamentoModal} onOpenChange={setShowCancelamentoModal}>
-          <DialogContent>
+          <DialogContent className="max-w-md sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-red-600">
                 <XCircle className="w-5 h-5" />
