@@ -5,7 +5,7 @@ export async function fetchTecnicos() {
   // tabela: light_tecnico (tecnico, matricula_light)
   const { data, error } = await supabase
     .from('light_tecnico')
-    .select('id, tecnico, matricula_light')
+    .select('tecnico, matricula_light')
     .order('tecnico')
   if (error) {
     console.warn('[lookups] erro ao buscar técnicos:', error.message)

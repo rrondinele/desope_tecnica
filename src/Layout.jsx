@@ -39,7 +39,7 @@ const navigationItems = [
     icon: FilePlus,
   },
       {
-    title: "Lista Folha Medição",
+    title: "Lista de Folhas Medição",
     url: createPageUrl("lista-folhas"),
     icon: Files,
   },
