@@ -10,6 +10,7 @@ import PrevisaoFaturamento from "../components/dashboard/PrevisaoFaturamento";
 export default function Dashboard() {
   const [servicos, setServicos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     loadServicos();
@@ -17,11 +18,19 @@ export default function Dashboard() {
 
   const loadServicos = async () => {
     setIsLoading(true);
+    setErrorMessage("");
     try {
       const data = await getServicos(); 
       setServicos(data);
     } catch (error) {
       console.error("Erro ao carregar serviços:", error);
+      const friendlyMessage =
+        error?.message &&
+        error.message.includes("URL base da API não está configurada")
+          ? "Não foi possível carregar os serviços porque a URL da API não está configurada. Verifique as variáveis de ambiente."
+          : "Não foi possível carregar os serviços no momento. Tente novamente em instantes.";
+
+      setErrorMessage(friendlyMessage);
     }
     setIsLoading(false);
   };
@@ -51,6 +60,11 @@ export default function Dashboard() {
         </motion.div>
 
         <div className="space-y-8">
+          {errorMessage && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {errorMessage}
+            </div>
+          )}
           {/* Cards de Métricas */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
