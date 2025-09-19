@@ -140,6 +140,19 @@ export default function NovaFolha() {
         ['municipio','Município'],
       ];
       req.forEach(([k,label]) => { if (!formData[k]) missing.push(label); });
+// Validação para Dados do Processo
+      if (formData.tipo_processo === 'Expansão') {
+        if (!formData.projeto || formData.projeto === 'OII-') {
+          missing.push('Projeto');
+        }
+      } else if (formData.tipo_processo === 'Manutenção') {
+        const isProjetoValido = formData.projeto && formData.projeto !== 'OMI-';
+        const isOsValida = formData.ordem_servico && formData.ordem_servico.trim() !== '';
+        if (!isProjetoValido && !isOsValida) {
+          missing.push('Projeto ou Ordem de Serviço');
+        }
+      }
+
       if (missing.length) {
         alert(`Preencha os campos obrigatórios:\n- ${missing.join('\n- ')}`);
         return;
