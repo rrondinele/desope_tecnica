@@ -38,9 +38,12 @@ export default function SearchableSelect({
         .select(cols)
         .order(columnName)
         .limit(20)
+      const searchTerm = columnName === 'tecnico' && typeof query === 'string'
+        ? query.split(',')[0]?.trim() ?? ''
+        : query
 
-      const { data, error } = query
-        ? await q.ilike(columnName, `%${query}%`)
+      const { data, error } = searchTerm
+        ? await q.ilike(columnName, `%${searchTerm}%`)
         : await q
       if (error) return
       if (!ignore) setItems(data || [])
@@ -63,11 +66,14 @@ export default function SearchableSelect({
   }, [selectionOnly, query, selectedLabel])
 
   function selectItem(row) {
-    const val = getValue ? getValue(row) : (row?.[columnName] ?? '')
     const fallback = row?.[columnName] ?? ''
-    const label = getLabel
-      ? getLabel(row)
-      : (columnName === 'tecnico' && row?.matricula_light ? `${row.tecnico}, ${row.matricula_light}` : fallback)
+    const defaultLabel = columnName === 'tecnico' && row?.matricula_light
+      ? `${row.tecnico}, ${row.matricula_light}`
+      : fallback
+    const label = getLabel ? getLabel(row) : defaultLabel
+    const val = getValue
+      ? getValue(row)
+      : (columnName === 'tecnico' && row?.matricula_light ? defaultLabel : fallback)
     setQuery(label)
     setSelectedLabel(label)
     setOpen(false)

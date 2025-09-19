@@ -320,11 +320,12 @@ export default function ListaFolhas() {
   };
 
   const getPrazoClass = (folha) => {
-    if (folha.status !== 'pendente' || !folha.data_obra) return "";
+    if (folha.status !== 'pendente' || !folha.data_obra) return ""; 
+    const obraDate = parseLocalDate(folha.data_obra);
+    if (!obraDate || Number.isNaN(obraDate.getTime())) return "";
     const hoje = new Date();
-    const dueDate = addBusinessDays(new Date(folha.data_obra), 2);
+    const dueDate = addBusinessDays(obraDate, 2);
     const diasRestantes = differenceInBusinessDays(dueDate, hoje);
-
     if (diasRestantes < 0) return { className: "bg-red-100", icon: AlertOctagon, text: "Atrasado" };
     if (diasRestantes === 0) return { className: "bg-orange-100", icon: AlertTriangle, text: "Vence Hoje" };
     if (diasRestantes === 1) return { className: "bg-yellow-100", icon: Clock, text: "Falta 1 dia" };
@@ -334,9 +335,27 @@ export default function ListaFolhas() {
   // Helper para contagem no resumo
   const getPrazoStatus = (folha) => {
     if (folha.status !== 'pendente' || !folha.data_obra) return 'none';
+
+    //+++++
+    const obraDate = parseLocalDate(folha.data_obra);
+    if (!obraDate || Number.isNaN(obraDate.getTime())) return 'none';
+    //+++++
+
     const hoje = new Date();
-    const dueDate = addBusinessDays(new Date(folha.data_obra), 2);
+
+
+    //const dueDate = addBusinessDays(new Date(folha.data_obra), 2);
+
+    //+++++
+    const dueDate = addBusinessDays(obraDate, 2);
+    //+++++
+
+
+
     const diasRestantes = differenceInBusinessDays(dueDate, hoje);
+
+
+
     if (diasRestantes < 0) return 'atrasado';
     if (diasRestantes === 0) return 'vence_hoje';
     return 'outros';
@@ -438,6 +457,12 @@ export default function ListaFolhas() {
       </div>
     );
   };
+
+ //+++++
+  const selectedObraDate = selectedFolha?.data_obra ? parseLocalDate(selectedFolha.data_obra) : null;
+//+++++
+
+
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
@@ -586,7 +611,12 @@ export default function ListaFolhas() {
                     <div><strong>Técnico Light:</strong> {selectedFolha.tecnico_light || 'N/A'}</div>
                     <div><strong>Município:</strong> {selectedFolha.municipio}</div>
                     <div><strong>Projeto:</strong> {selectedFolha.projeto}</div>
-                    <div><strong>Data da Obra:</strong> {selectedFolha.data_obra ? format(new Date(selectedFolha.data_obra), 'dd/MM/yyyy') : 'N/A'}</div>
+                    <div>
+                      <strong>Data da Obra:</strong>{' '}
+                      {selectedObraDate && !Number.isNaN(selectedObraDate.getTime())
+                        ? format(selectedObraDate, 'dd/MM/yyyy')
+                        : 'N/A'}
+                    </div>
                     <div><strong>Status Atual:</strong> {renderStatusBadge(selectedFolha.status)}</div>
                   </CardContent>
                 </Card>
