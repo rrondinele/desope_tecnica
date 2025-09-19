@@ -349,6 +349,22 @@ export default function ListaFolhas() {
     return <Badge variant="secondary" className={`${config.color} border font-medium`}><Icon className="w-3 h-3 mr-1" />{config.label}</Badge>;
   };
 
+  // Evita regressão de um dia ao exibir datas 'YYYY-MM-DD' (trata como local)
+  const parseLocalDate = (str) => {
+    if (!str) return null;
+    if (typeof str === 'string') {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+        const [y, m, d] = str.split('-').map(Number);
+        return new Date(y, m - 1, d);
+      }
+      if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(str)) {
+        // Normaliza espaço para 'T' e deixa o motor tratar como local
+        return new Date(str.replace(' ', 'T'));
+      }
+    }
+    return new Date(str);
+  };
+
   const renderActionButtons = (folha) => (
     <div className="flex gap-1">
       <Button
@@ -517,10 +533,10 @@ export default function ListaFolhas() {
                       <TableCell>{folha.projeto}</TableCell>
                       <TableCell>{folha.tipo_processo}</TableCell>
                       <TableCell>{folha.municipio}</TableCell>
-                      <TableCell>{folha.data_obra ? format(new Date(folha.data_obra), 'dd/MM/yy') : '-'}</TableCell>
+                      <TableCell>{folha.data_obra ? format(parseLocalDate(folha.data_obra), 'dd/MM/yy') : '-'}</TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span>{folha.data_envio ? format(new Date(folha.data_envio), 'dd/MM/yy') : '-'}</span>
+                          <span>{folha.data_envio ? format(parseLocalDate(folha.data_envio), 'dd/MM/yy') : '-'}</span>
                           {folha.metodo_envio && (
                             <span className="text-xs text-gray-500 flex items-center gap-1">
                               {folha.metodo_envio === 'E-mail' ? <Mail className="w-3 h-3" /> : <Share className="w-3 h-3" />}
@@ -529,7 +545,7 @@ export default function ListaFolhas() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{folha.data_retorno_distribuidora ? format(new Date(folha.data_retorno_distribuidora), 'dd/MM/yy') : '-'}</TableCell>
+                      <TableCell>{folha.data_retorno_distribuidora ? format(parseLocalDate(folha.data_retorno_distribuidora), 'dd/MM/yy') : '-'}</TableCell>
                       <TableCell>{renderStatusBadge(folha.status)}</TableCell>
                       <TableCell>
                         {PrazoIcon && (

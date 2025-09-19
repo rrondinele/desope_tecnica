@@ -32,6 +32,7 @@ export default function NovaFolha() {
     hora_inicio: '',
     hora_fim: '',
     municipio: '',
+    base_operacional: '',
     circuito: '',
     projeto: 'OII-',
     ordem_servico: '',
@@ -127,9 +128,24 @@ export default function NovaFolha() {
   }, [formData.tipo_processo, formData.projeto]);
 
   const handleNext = () => {
-    if (currentStep < steps.length) {
-      setCurrentStep(currentStep + 1);
+    if (currentStep === 1) {
+      const missing = [];
+      const req = [
+        ['tecnico_light','Técnico Light'],
+        ['data_obra','Data da Obra'],
+        ['hora_acionada','Hora Acionada'],
+        ['hora_inicio','Hora Início'],
+        ['hora_fim','Hora Fim'],
+        ['endereco','Endereço Completo'],
+        ['municipio','Município'],
+      ];
+      req.forEach(([k,label]) => { if (!formData[k]) missing.push(label); });
+      if (missing.length) {
+        alert(`Preencha os campos obrigatórios:\n- ${missing.join('\n- ')}`);
+        return;
+      }
     }
+    if (currentStep < steps.length) setCurrentStep(currentStep + 1);
   };
 
   const handlePrevious = () => {

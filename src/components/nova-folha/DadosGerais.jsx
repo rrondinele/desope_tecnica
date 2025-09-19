@@ -1,11 +1,15 @@
-import React from "react";
+﻿import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2, FileCog } from "lucide-react";
+import SearchableSelect from "@/components/SearchableSelect";
+import { fetchTecnicos, fetchMunicipios } from "@/services/lookups";
 
 export default function DadosGerais({ data, updateData }) {
+  const [tecnicos, setTecnicos] = useState([]);
+  const [municipios, setMunicipios] = useState([]);
   const handleInputChange = (field, value) => {
     updateData({ [field]: value });
   };
@@ -26,6 +30,16 @@ export default function DadosGerais({ data, updateData }) {
   };
 
   const canProceed = data.tecnico_light && data.endereco && data.tipo_processo && data.data_obra;
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [t, m] = await Promise.all([fetchTecnicos(), fetchMunicipios()]);
+        setTecnicos(t || []);
+        setMunicipios(m || []);
+      } catch {}
+    })();
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -53,34 +67,58 @@ export default function DadosGerais({ data, updateData }) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="tecnico_light" className="text-sm font-semibold text-slate-700">Técnico Light *</Label>
-              <Input id="tecnico_light" value={data.tecnico_light} onChange={(e) => handleInputChange('tecnico_light', e.target.value)} placeholder="Nome do técnico da Light" className="border-slate-300" />
+              <SearchableSelect
+                id="tecnico_light"
+                tableName="light_tecnico"
+                columnName="tecnico"
+                placeholder="Digite ou selecione o técnico"
+                value={data.tecnico_light || ""}
+                required
+                onValueChange={(val) => handleInputChange('tecnico_light', val)}
+              />
             </div>
             {/* Segunda linha: 4 divs */}
             <div className="space-y-2">
               <Label htmlFor="data_obra" className="text-sm font-semibold text-slate-700">Data Execução da Obra *</Label>
-              <Input id="data_obra" type="date" value={data.data_obra} onChange={(e) => handleInputChange('data_obra', e.target.value)} className="border-slate-300" />
+              <Input id="data_obra" type="date" value={data.data_obra} onChange={(e) => handleInputChange('data_obra', e.target.value)} className="border-slate-300" required />
             </div>
                         <div className="space-y-2">
               <Label htmlFor="hora_acionada" className="text-sm font-semibold text-slate-700">Hora Acionada</Label>
-              <Input id="hora_acionada" type="time" value={data.hora_acionada} onChange={(e) => handleInputChange('hora_acionada', e.target.value)} className="border-slate-300" />
+              <Input id="hora_acionada" type="time" value={data.hora_acionada} onChange={(e) => handleInputChange('hora_acionada', e.target.value)} className="border-slate-300" required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="hora_inicio" className="text-sm font-semibold text-slate-700">Hora Início</Label>
-              <Input id="hora_inicio" type="time" value={data.hora_inicio} onChange={(e) => handleInputChange('hora_inicio', e.target.value)} className="border-slate-300" />
+              <Input id="hora_inicio" type="time" value={data.hora_inicio} onChange={(e) => handleInputChange('hora_inicio', e.target.value)} className="border-slate-300" required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="hora_fim" className="text-sm font-semibold text-slate-700">Hora Fim</Label>
-              <Input id="hora_fim" type="time" value={data.hora_fim} onChange={(e) => handleInputChange('hora_fim', e.target.value)} className="border-slate-300" />
+              <Input id="hora_fim" type="time" value={data.hora_fim} onChange={(e) => handleInputChange('hora_fim', e.target.value)} className="border-slate-300" required />
             </div>
 
             {/* Terceira linha: campos de endereço */}
             <div className="space-y-2 lg:col-span-2">
               <Label htmlFor="endereco" className="text-sm font-semibold text-slate-700">Endereço Completo *</Label>
-              <Input id="endereco" value={data.endereco} onChange={(e) => handleInputChange('endereco', e.target.value)} placeholder="Rua, número, bairro..." className="border-slate-300" />
+              <Input id="endereco" value={data.endereco} onChange={(e) => handleInputChange('endereco', e.target.value)} placeholder="Rua, número, bairro..." className="border-slate-300" required />
             </div>
-            <div className="space-y-2 lg:col-span-2">
+            <div className="space-y-2">
               <Label htmlFor="municipio" className="text-sm font-semibold text-slate-700">Município *</Label>
-              <Input id="municipio" value={data.municipio} onChange={(e) => handleInputChange('municipio', e.target.value)} placeholder="Ex: Rio de Janeiro" className="border-slate-300" />
+              <SearchableSelect
+                id="municipio"
+                tableName="light_municipio"
+                columnName="municipio"
+                selectColumns="municipio,regional"
+                placeholder="Ex: Rio de Janeiro"
+                value={data.municipio || ""}
+                required
+                onValueChange={(val, row) => {
+                  handleInputChange('municipio', val);
+                  if (row?.regional) handleInputChange('regional', row.regional);
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="regional" className="text-sm font-semibold text-slate-700">Base Operacional</Label>
+              <Input id="regional" value={data.regional} readOnly placeholder="Ex: Volta Redonda" className="border-slate-300 bg-slate-100" />
             </div>
           </div>
         </CardContent>
@@ -209,3 +247,4 @@ export default function DadosGerais({ data, updateData }) {
     </div>
   );
 }
+
