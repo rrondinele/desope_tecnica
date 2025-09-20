@@ -79,13 +79,13 @@ export default function Login() {
               <div className="relative group">
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-300 rounded-full blur-xl opacity-30 group-hover:opacity-40 transition-opacity duration-300"></div>
                 <span className="flex shrink-0 overflow-hidden rounded-full relative h-20 w-20 sm:h-24 sm:w-24 shadow-lg ring-4 ring-white/50 group-hover:shadow-xl transition-all duration-300">
-                  <img className="aspect-square h-full w-max object-cover" alt="" src="https://nldawnoanfzfyyauljwc.supabase.co/storage/v1/object/public/public-images/tigrinhos.jpg"/>
+                  <img className="aspect-square h-full w-full object-cover" alt="" src="https://nldawnoanfzfyyauljwc.supabase.co/storage/v1/object/public/public-images/tigrinhos.jpg"/>
 
                 </span>
               </div>
 
               <div className="space-y-2 sm:space-y-3">
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Bem-vindo ao DesOpe</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Bem-vindo ao MpTs</h1>
                 <p className="text-slate-500 text-sm sm:text-base font-medium">Faça login para continuar</p>
               </div>
 
