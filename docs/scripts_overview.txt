@@ -1,0 +1,71 @@
+Visão geral da pasta de scripts
+========================
+
+Objetivo
+-------
+O diretório `scripts/` agrupa pequenos utilitários do Node.js usados ​​para inspecionar, depurar ou prototipar interações com o modelo do Excel. Nenhum deles está conectado ao tempo de execução do aplicativo; eles devem ser executados manualmente por meio de `node <script>`.
+
+Uso do tempo de execução
+-------------
+- **Fluxo atual do aplicativo:** o aplicativo web nunca chama esses scripts; as exportações dependem da página React e dos auxiliares `exportTemplate` que você viu anteriormente.
+- **Por que mantê-los:** eles aceleram a solução de problemas de modelos (verificação de intervalos, inspeção de mesclagens, snapshots de backups) sem afetar a interface do usuário.
+- **Futuro do banco de dados:** mesmo quando os dados são direcionados ao banco, esses utilitários permanecem disponíveis para validar o arquivo base, simular preenchimentos e comparar versões antes de publicar alterações.
+
+1. `scripts/dump_template.mjs`
+-----------------------------
+1.1 Objetivo
+- Gera os bytes brutos de `public/model-export/FOLHA DE MEDICAO.xlsx` para STDOUT.
+- Útil quando você deseja canalizar o modelo para outras ferramentas (por exemplo, `node scripts/dump_template.mjs > backup.xlsx`).
+
+1.2 Pontos principais
+- Lê o arquivo de forma síncrona usando `fs.readFileSync` do Node.
+- Resolve o caminho relativo à raiz do projeto (`public/model-export`).
+- Não realiza análise ou validação; se o arquivo de modelo estiver ausente, o script é gerado imediatamente.
+
+2. `scripts/debug_excel.mjs`
+---------------------------
+2.1 Objetivo
+- Carregador mínimo do SheetJS (xlsx) para confirmar se a pasta de trabalho do modelo pode ser aberta e inspecionar os metadados da primeira planilha.
+
+2.2 O que faz
+- Carrega o modelo na memória como um buffer.
+- Utiliza `XLSX.read` com `{ type: 'buffer' }` para criar uma pasta de trabalho.
+- Registra o nome da primeira planilha e o intervalo `!ref` atual para que você possa verificar os limites após edições manuais.
+
+2.3 Quando executar
+- Após receber um novo modelo: garante que a pasta de trabalho não esteja corrompida e registra o intervalo relatado.
+
+3. `scripts/inspect_export.mjs`
+-------------------------------
+3.1 Objetivo
+- Semelhante ao `debug_excel.mjs`, mas imprime intencionalmente chaves de células brutas para inspecionar exatamente quais endereços existem.
+- Útil para detectar células em branco inesperadas, mesclagens ou referências removidas.
+
+3.2 Detalhes da implementação
+- Utiliza a importação dinâmica do build do ESM `xlsx.mjs` localizado em `node_modules/xlsx` para evitar restrições do bundler.
+- Imprime `sheet['!ref']` seguido por todas as chaves que não começam com `!` (endereços de células reais).
+
+4. `scripts/test_excel.mjs`
+---------------------------
+4.1 Objetivo
+- Sandbox para manipular o modelo via SheetJS, validando funções auxiliares, como atualizações de intervalo e lógica de inserção de células.
+
+4.2 Principais auxiliares definidos
+- `columnLettersToIndex`, `parseCellReference`, `createCellValue`, `ensureSheetRange` e `setSheetValue`.
+- Demonstra a escrita de um valor em `A2` e exibe o objeto de célula resultante.
+
+4.3 Uso
+- Execute `node scripts/test_excel.mjs` ao testar novos utilitários de mapeamento ou verificar como `!ref` se comporta após edições programáticas.
+
+5. Fluxo de trabalho sugerido
+---------------------
+- Comece com `debug_excel.mjs` para confirmar a integridade do modelo.
+- Use `inspect_export.mjs` para listar endereços de células ao mapear JSON para posições de modelo.
+- Utilize `test_excel.mjs` para prototipar funções de transformação antes de movê-las para o código de produção.
+- Mantenha `dump_template.mjs` à mão para capturar versões de modelo ou comparar alterações binárias (`fc /b` no Windows, `cmp` no Unix).
+
+Observações
+-----
+- Todos os scripts assumem que o modelo reside em `public/model-export/FOLHA DE MEDICAO.xlsx`.
+- Eles dependem do pacote `xlsx` (SheetJS); Certifique-se de que `npm install` foi executado antes de executá-los.
+- Nenhum dos scripts altera arquivos; eles leem dados e imprimem diagnósticos, tornando-os seguros para verificações rápidas.

@@ -1,9 +1,12 @@
-// Regras do Revisao
+// ===================================
+// Rules for Revisao step
+// ===================================
 
+// Rule: builds the payload used when finishing the review step
 export function generateFinalData(data, finalStatus) {
   return {
     ...data,
-    id: new Date().getTime(),
+    id: Date.now(),
     created_date: new Date().toISOString(),
     status: finalStatus,
     status_historico: [
@@ -18,6 +21,7 @@ export function generateFinalData(data, finalStatus) {
   };
 }
 
+// Rule: defines button appearance while saving
 export function getButtonState(isSaving) {
   return {
     disabled: isSaving,

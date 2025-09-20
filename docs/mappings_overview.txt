@@ -1,0 +1,39 @@
+Mappings Folder Overview
+========================
+
+Purpose
+-------
+The JSON files inside `src/Mappings/` drive how business data is written into the Excel template. Each file maps entity fields to cell references, allowing `exportFolhaMedicao` to remain data-driven.
+
+How they are consumed
+---------------------
+- `src/exportTemplate/exportFolhaMedicao.js` imports each mapping and feeds it to helper functions (`fillHeadMapping`, `fillCollection`).
+- Changing a cell address in these JSON files immediately affects the export without touching JavaScript code.
+
+Files
+-----
+1. `Headmapping_excel.json`
+   - Maps single-value fields (headers) to explicit cell references (e.g., número da folha, endereço, datas).
+   - Structure: `{ "folha.campo": "A2" }` where the key uses dot-notation understood by `getValueFromPath`.
+
+2. `Servicemapping_excel.json`
+   - Handles repeating service rows.
+   - Each property describes the starting column/row (e.g., `"descricao": "B12"`). The exporter increments the row automatically per item.
+
+3. `Equipmentmapping_excel.json`
+   - Contains two sections (`equipamentosInstalados`, `equipamentosRetirados`).
+   - Same convention as services: base cell for each field and automatic row increment.
+
+4. `Materialsmapping_excel.json`
+   - Similar to equipment mapping but for materials instalados e retirados.
+   - Ensures material descriptions, lotes e quantidades caiam nas colunas corretas.
+
+5. `Teammapping_excel.json`
+   - Descreve como preencher o bloco de equipes (nome da equipe e lista de eletricistas).
+   - Permite repetir linhas para cada membro da equipe.
+
+Maintenance checklist
+---------------------
+- Sempre que o template mudar, atualize as referências aqui (colunas/linhas) antes de rodar o export.
+- Use `scripts/inspect_export.mjs` para identificar novos endereços ao validar mappings.
+- Documente mudanças relevantes para que a equipe saiba quais células foram realocadas.

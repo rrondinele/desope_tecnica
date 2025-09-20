@@ -1,44 +1,48 @@
-// ==============================
-// 📌 Regras para MateriaisSection
-// ==============================
+// ===================================
+// Rules for Materiais section
+// ===================================
 
-// Estado inicial do formulário
+// State: default values for a new material entry
 export const initialState = {
-  descricao: '',
-  lote: '',
+  descricao: "",
+  lote: "",
   quantidade: 0,
-  origem: ''
+  origem: ""
 };
 
-// ✅ Gera ID único
+// Rule: generate a unique identifier
 export function gerarIdUnico() {
   return Date.now();
 }
 
-// ✅ Valida material (descrição + quantidade obrigatórios)
+// Rule: validates mandatory material fields
 export function validarMaterial(material) {
-  return Boolean(material.descricao && parseFloat(material.quantidade) > 0);
+  return Boolean(material?.descricao && parseFloat(material?.quantidade) > 0);
 }
 
-// ✅ Adiciona material à lista
-export function adicionarMaterial(material, listaAtual) {
+// Rule: add material to the list when valid
+export function adicionarMaterial(material, listaAtual = []) {
   if (!validarMaterial(material)) {
-    alert("Os campos 'Descrição do Material' e 'Quantidade' são obrigatórios.");
+    alert("Os campos 'Descricao do Material' e 'Quantidade' sao obrigatorios.");
     return listaAtual;
   }
 
   return [
-    ...(listaAtual || []),
-    { ...material, id: gerarIdUnico(), quantidade: parseFloat(material.quantidade) }
+    ...listaAtual,
+    {
+      ...material,
+      id: gerarIdUnico(),
+      quantidade: parseFloat(material.quantidade)
+    }
   ];
 }
 
-// ✅ Remove material pelo ID
-export function removerMaterial(id, listaAtual) {
-  return listaAtual.filter((m) => m.id !== id);
+// Rule: remove material by id
+export function removerMaterial(id, listaAtual = []) {
+  return listaAtual.filter((item) => item.id !== id);
 }
 
-// ✅ Mensagem condicional se lista vazia
-export function obterMensagemListaVazia(lista) {
-  return (!lista || lista.length === 0) ? "Nenhum material cadastrado." : null;
+// Rule: helper message when the list is empty
+export function obterMensagemListaVazia(lista = []) {
+  return lista.length === 0 ? "Nenhum material cadastrado." : null;
 }

@@ -1,24 +1,30 @@
-// Regras do DadosGerais
+// ===================================
+// Rules for DadosGerais section
+// ===================================
 
-export function getProjetoPrefix(tipo_processo) {
-  return tipo_processo === "Manuten√ß√£o" ? "OMI-" : "OII-";
+// Rule: returns the prefix based on the selected process type
+export function getProjetoPrefix(tipoProcesso) {
+  return tipoProcesso === "ManutenÁ„o" ? "OMI-" : "OII-";
 }
 
-export function isProjetoRequired(tipo_processo, caracteristica) {
+// Rule: defines if the project field is required
+export function isProjetoRequired(tipoProcesso, caracteristica) {
   return (
-    (tipo_processo === "Expans√£o" && caracteristica === "Programada") ||
-    (tipo_processo === "Manuten√ß√£o" && caracteristica === "Programada")
+    (tipoProcesso === "Expans„o" && caracteristica === "Programada") ||
+    (tipoProcesso === "ManutenÁ„o" && caracteristica === "Programada")
   );
 }
 
-export function isOrdemServicoRequired(tipo_processo, caracteristica) {
-  return tipo_processo === "Manuten√ß√£o" && caracteristica === "Emergencial";
+// Rule: defines if the work order field is required
+export function isOrdemServicoRequired(tipoProcesso, caracteristica) {
+  return tipoProcesso === "ManutenÁ„o" && caracteristica === "Emergencial";
 }
 
+// Rule: accepts only valid order numbers (empty or starting with 9 with max 8 digits)
 export function validarOrdemServico(valor) {
-  const clean = valor.replace(/\D/g, "");
-  if (clean.length <= 8 && (clean === "" || clean.startsWith("9"))) {
-    return clean;
+  const cleanValue = valor.replace(/\D/g, "");
+  if (cleanValue.length <= 8 && (cleanValue === "" || cleanValue.startsWith("9"))) {
+    return cleanValue;
   }
   return null;
 }

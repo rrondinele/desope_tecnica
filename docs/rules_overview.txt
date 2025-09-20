@@ -1,0 +1,36 @@
+Rules Folder Overview
+=====================
+
+Purpose
+-------
+`src/rules/` centralises pure JavaScript helpers that encapsulate validation, formatting, and UI behaviour for multiple screens. Each file now follows a consistent header/comment pattern similar to `equipeRules.js`.
+
+Key modules
+-----------
+- `dadosGeraisRules.js`: regras usadas no passo Dados Gerais (prefixos, campos obrigatórios, validação de ordem de serviço).
+- `equipamentosRules.js`: utilidades para listas de equipamentos instalados/retirados (estado inicial, adicionar/remover, mensagens).
+- `equipeRules.js`: geração de IDs, validações e mensagens para equipes e eletricistas.
+- `formularioCadastroRules.js`: parsers e estados de botão no formulário de programação.
+- `listFMRules.js`: lógica da lista de folhas (seleção para exportação, formatação de valores, regras de status).
+- `materiaisRules.js`: utilidades para o bloco de materiais instalados/retirados.
+- `revisaoRules.js`: payload final e estado do botão na etapa de revisão.
+- `servicosStepRules.js`: catálogo de serviços, cálculos e validações para o passo de serviços.
+- `stepIndicatorRules.js`: determina status e cores do componente de etapas.
+- `templateRules.js`: configurações do template Excel e listas de campos numéricos/ de data.
+
+Uso típico
+---------
+- Os componentes React importam essas funções para manter o JSX limpo e testável.
+- A lógica compartilhada também pode ser reutilizada em serviços backend, pois os módulos não dependem do DOM.
+
+Manutenção
+----------
+- Novas regras devem seguir o cabeçalho padrão e expor funções nomeadas (`export function ...`).
+- Valores exibidos ao usuário devem ser mantidos aqui para facilitar ajustes de copy.
+- Sempre que remover uma função, verifique se não há importações pendentes em componentes/pages.
+
+Relacionamentos importantes
+---------------------------
+- `templateRules.js` é consumido por `exportTemplate/exportFolhaMedicao.js`.
+- `listFMRules.js` trabalha em conjunto com os mappings JSON para preencher a planilha.
+- `equipamentosRules.js`, `materiaisRules.js` e `servicosStepRules.js` alimentam seções que exportam coleções repetitivas.

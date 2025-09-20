@@ -1,5 +1,9 @@
-// Regras da tela ListaFolhas
+// ===================================
+// Rules for ListaFolhas screen
+// ===================================
 
+
+// Internal function to normalize IDs for comparison
 const normalizeIdInternal = (value) => {
   if (value === undefined || value === null) {
     return null;
@@ -7,8 +11,10 @@ const normalizeIdInternal = (value) => {
   return String(value);
 };
 
+// Exported for external use if needed
 export const normalizeId = normalizeIdInternal;
 
+// Rule: toggles selection of a folha for export
 export function toggleExportSelection(currentSelectedId, folhaId) {
   const current = normalizeIdInternal(currentSelectedId);
   const target = normalizeIdInternal(folhaId);
@@ -20,6 +26,7 @@ export function toggleExportSelection(currentSelectedId, folhaId) {
   return folhaId;
 }
 
+// Rule: validates the selected folha for export
 export function validateExportSelection(selectedId, folhas) {
   const normalized = normalizeIdInternal(selectedId);
 
@@ -31,6 +38,7 @@ export function validateExportSelection(selectedId, folhas) {
     };
   }
 
+  // procura a folha correspondente
   const folhaEncontrada = (folhas || []).find(
     (folha) => normalizeIdInternal(folha?.id) === normalized
   );
@@ -46,6 +54,8 @@ export function validateExportSelection(selectedId, folhas) {
   return { valid: true, folha: folhaEncontrada };
 }
 
+
+// Rule: safely retrieves a nested value from an object using a dot-separated path
 export function getValueFromPath(data, path) {
   if (!path) {
     return undefined;
@@ -59,6 +69,7 @@ export function getValueFromPath(data, path) {
   }, data);
 }
 
+// Rule: builds a sanitized filename for exporting to Excel
 export function buildExcelFileName(folha) {
   const numero = folha?.numero_fm ? String(folha.numero_fm) : "folha";
   const sanitized = numero.replace(/[\\/:*?"<>|]/g, "-");
@@ -100,6 +111,8 @@ export const STATUS_RULES = {
   },
 };
 
+
+// Rule: retrieves status details based on status key
 export function getStatusRule(status) {
   return STATUS_RULES[status] || null;
 }

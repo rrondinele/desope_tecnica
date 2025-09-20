@@ -1,16 +1,16 @@
 {
   "equipamentosInstalados": {
-    "serial": "A26",
-    "numero_lp": "B26",
-    "fabricante": "C26",
-    "capacidade": "D26",
-    "data_fabricacao": "E26"
+    "serial": "K33",
+    "numero_lp": "K32",
+    "fabricante": "K31",
+    "capacidade": "K30",
+    "data_fabricacao": "K34"
   },
   "equipamentosRetirados": {
-    "serial": "A34",
-    "numero_lp": "B34",
-    "fabricante": "C34",
-    "capacidade": "D34",
-    "data_fabricacao": "E34"
+    "serial": "L33",
+    "numero_lp": "L32",
+    "fabricante": "L31",
+    "capacidade": "L30",
+    "data_fabricacao": "L34"
   }
 }

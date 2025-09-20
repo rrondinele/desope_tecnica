@@ -1,8 +1,8 @@
 {
   "equipes": {
-    "codigo_equipe": "A12",
-    "encarregado": "B12",
-    "motorista": "C12",
-    "eletricistas": "D12"
+    "codigo_equipe": "c30",
+    "encarregado": "C10",
+    "motorista": "C32",
+    "eletricistas": "C33"
   }
 }

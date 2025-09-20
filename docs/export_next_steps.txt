@@ -1,0 +1,159 @@
+Plano de Integração Completo
+================================
+
+Resumo
+------
+Este documento descreve os passos sugeridos para conectar a exportação de planilhas ao banco de dados, ajustar o template de Excel e garantir que mudanças futuras sejam seguras e auditáveis.
+
+1. Preparação do Ambiente
+-------------------------
+1.1 Revisar dependências
+    - Conferir se 'xlsx-populate' já está instalado (npm ls xlsx-populate).
+    - Revisar se há drivers de banco (por exemplo, 'pg') no projeto; instalar se necessário: npm install pg.
+
+1.2 Garantir variáveis de ambiente
+    - Definir DATABASE_URL (ou variável similar) no .env e na configuração do runtime.
+    - Validar que o valor aponta para o banco correto (produção, homologação, etc.).
+
+1.3 Organizar credenciais
+    - Confirmar acesso seguro ao banco (usuário, senha, privilégios).
+    - Decidir se a aplicação terá usuário somente leitura para exportação.
+
+2. Entendendo os Artefatos Criados
+----------------------------------
+2.1 templateRules.js
+    - Contém caminho do template, índice da planilha, linha inicial e fallback de estilo.
+    - Qualquer alteração de layout deve ser refletida aqui (ex.: novo templatePath).
+
+2.2 exportFolhaMedicao.js
+    - Lê o template, aplica mapeamentos e exporta o arquivo final.
+    - Usa templateRules e fieldRules para tratar datas, números e estilos.
+    - Possui mecanismos para ajustar estilos via fallback se for necessário alterar fonte ou alinhamento.
+
+2.3 fetchFolhaData.js
+    - Define queries de exemplo (modularizadas) para cada bloco de dados do template.
+    - Mostra como construir um repository (createFolhaTemplateRepository) a partir de um provider de conexão (pgClientProvider).
+    - Não está incluído em nenhum fluxo ainda; serve como blueprint.
+
+3. Ajustar Consultas SQL
+-------------------------
+3.1 Validar nomes de tabela e colunas
+    - Comparar o esquema real com as queries do arquivo (folhas, folhas_servicos, etc.).
+    - Ajustar joins e colunas conforme a estrutura existente.
+
+3.2 Confirmar campos obrigatórios
+    - Garantir que campos exigidos pelo template (nome, endereço, datas, etc.) estejam presentes nas consultas.
+    - Adicionar CASTs se precisar adequar formatos (ex.: to_char em datas ou currency).
+
+3.3 Revisar ordenação
+    - Verificar se ORDER BY atende ao layout esperado (ordem de serviços, materiais, etc.).
+
+4. Implementar Camada de Acesso
+--------------------------------
+4.1 Criar provider real
+    - Importar Pool do 'pg' (ou outra biblioteca) em ponto central (ex.: src/infrastructure/db/index.js).
+    - Instanciar o provider: const provider = pgClientProvider({ PoolClass: Pool, connectionString: process.env.DATABASE_URL }).
+
+4.2 Expor funções reutilizáveis
+    - Exportar provider.getClient para reuso em outras partes do app (se necessário).
+
+4.3 Configurar tratamento de erros
+    - Envelopar getClient em try/catch para logar falhas de conexão.
+    - Avaliar retry/backoff em caso de instabilidade.
+
+5. Conectar Repositório ao Fluxo de Exportação
+-----------------------------------------------
+5.1 Localizar origem do dado hoje
+    - Identificar onde ListaFolhas busca os dados (provavelmente API/serviço).
+
+5.2 Decidir local da integração
+    - Opção A: Backend retorna JSON pronto e front usa exportFolhaMedicao como hoje.
+    - Opção B: Front chama endpoint específico que já devolve arquivo gerado (node backend executando exportFolhaMedicao).
+    - Opção C: Front requisita JSON ao backend que, por sua vez, usa repository para popular template e devolver o arquivo.
+
+5.3 Implementar serviço de domínio
+    - Criar função (ex.: exportFolhaService) que recebe folhaId, usa repository.fetchFolha, chama exportFolhaMedicao e retorna Blob/Buffer.
+    - Isolar responsabilidade de logging e auditoria (quem gerou, quando, com qual template).
+
+5.4 Atualizar UI ou endpoint
+    - Se front continuar gerando: criar hook que chama API para buscar dados brutos, passa a exportFolhaMedicao e baixa arquivo.
+    - Se backend gerar: substituir chamada atual por fetch ao endpoint /exportacao/folha/:id (retornando stream ou link).
+
+6. Ajustar templateRules conforme evoluções
+-------------------------------------------
+6.1 Alterar templatePath
+    - Quando receber nova versão do Excel, fazer upload para public/model-export e atualizar templatePath.
+
+6.2 Defender merges
+    - Se nova planilha usar abas extras, ajustar defaultSheetIndex.
+    - Atualizar defaultStartRow se linhas de repetição mudarem.
+
+6.3 Fallback styling
+    - Habilitar fallbackStyle.enabled somente se desejar sobrepor estilos do template.
+    - Ajustar fonte/alinhamento/numberFormat conforme necessário (ex.: fonte institucional).
+
+7. Segurança e Observabilidade
+--------------------------------
+7.1 Auditoria
+    - Registrar em log cada exportação (folhaId, usuário, timestamp).
+    - Se possível, armazenar hash do arquivo gerado para rastreabilidade.
+
+7.2 Sanitização
+    - Garantir que valores vindos do banco não contenham fórmulas maliciosas (prefixar com "'" se necessário).
+    - Validar tamanho de strings para não quebrar template (ex.: limites de 32.767 caracteres em células).
+
+7.3 Rate limiting
+    - Se exportação for exposta via API, aplicar throttling para evitar abuso.
+
+8. Testes
+---------
+8.1 Testes unitários
+    - Mockar getClient e validar se fetchFolha monta objeto completo.
+    - Testar formatValueForExcel com datas, números e strings limites.
+
+8.2 Testes de integração
+    - Criar base de dados de homologação com dados reais.
+    - Gerar Excel e comparar com template original (focando em estilos e merges).
+
+8.3 Testes de snapshot
+    - Considerar usar biblioteca XLSX para ler arquivo gerado e comparar principais campos (desconsiderando estilos).
+
+9. Deploy e Documentação
+------------------------
+9.1 Checklist de deploy
+    - Subir template atualizado para public/model-export.
+    - Garantir que templateRules reflita o novo arquivo.
+    - Atualizar .env nos ambientes com connection string correta.
+
+9.2 Documentar processo
+    - Registrar passo-a-passo em README interno ou wiki (como atualizar template, executar exportação manual, debugar problemas).
+
+9.3 Comunicação
+    - Informar equipe sobre nova fonte de dados e responsabilidades (quem atualiza template, quem valida dados).
+
+9.4 Monitoramento pós-deploy
+    - Acompanhar logs de exportação e feedback de usuários na primeira semana.
+    - Incluir métricas básicas (quantidade de exportações, tempo médio).
+
+10. Melhorias Futuras
+--------------------
+10.1 Cache de templates
+    - Evitar ler arquivo do disco a cada export (armazenar workbook base em memória com deep clone).
+
+10.2 Paginação de coleções
+    - Se a folha tiver muitas linhas, avaliar se template precisa de abas extras ou paginação automática.
+
+10.3 Suporte a múltiplos layouts
+    - Expandir templateRules para aceitar mapeamento por tipo de serviço ou cliente (ex.: templatePath por distribuidora).
+
+10.4 Assinaturas digitais
+    - Avaliar se arquivo precisa de assinatura eletrônica ou bloqueio de edição.
+
+10.5 Automação de envio
+    - Planejar integração com email/FTP para distribuir arquivos automaticamente após exportação.
+
+Referências
+-----------
+- Documentação XlsxPopulate: https://docs.xlsxpopulate.com/
+- Documentação PostgreSQL Client (pg): https://node-postgres.com/
+- Boas práticas para exportação segura de planilhas: https://owasp.org/www-project-cheat-sheets/ (Excel security)
