@@ -336,25 +336,11 @@ export default function ListaFolhas() {
   const getPrazoStatus = (folha) => {
     if (folha.status !== 'pendente' || !folha.data_obra) return 'none';
 
-    //+++++
     const obraDate = parseLocalDate(folha.data_obra);
     if (!obraDate || Number.isNaN(obraDate.getTime())) return 'none';
-    //+++++
-
     const hoje = new Date();
-
-
-    //const dueDate = addBusinessDays(new Date(folha.data_obra), 2);
-
-    //+++++
     const dueDate = addBusinessDays(obraDate, 2);
-    //+++++
-
-
-
     const diasRestantes = differenceInBusinessDays(dueDate, hoje);
-
-
 
     if (diasRestantes < 0) return 'atrasado';
     if (diasRestantes === 0) return 'vence_hoje';

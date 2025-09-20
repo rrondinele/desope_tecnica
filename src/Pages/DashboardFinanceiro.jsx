@@ -19,6 +19,22 @@ const statusConfig = {
   cancelado: { label: "Cancelado", color: "#ef4444", icon: AlertTriangle }
 };
 
+// Helper para corrigir a data para o fuso local
+const parseLocalDate = (str) => {
+  if (!str) return null;
+  if (typeof str === 'string') {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      const [y, m, d] = str.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+    if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(str)) {
+      // Normaliza espaço para 'T' e deixa o motor tratar como local
+      return new Date(str.replace(' ', 'T'));
+    }
+  }
+  return new Date(str);
+};
+
 export default function DashboardFinanceiro() {
   const [folhas, setFolhas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,14 +54,15 @@ export default function DashboardFinanceiro() {
   }, []);
 
   const kpisFinanceiros = useMemo(() => {
-    const comEnvio = folhas.filter(f => f.data_obra && f.data_envio);
-    const comRetorno = folhas.filter(f => f.data_envio && f.data_retorno_distribuidora);
+    const comEnvio = folhas.filter(f => parseLocalDate(f.data_obra) && parseLocalDate(f.data_envio));
+    const comRetorno = folhas.filter(f => parseLocalDate(f.data_envio) && parseLocalDate(f.data_retorno_distribuidora));
+
+
     
     const tempoMedioEnvio = comEnvio.length > 0 ? 
-      comEnvio.reduce((acc, f) => acc + differenceInBusinessDays(new Date(f.data_envio), new Date(f.data_obra)), 0) / comEnvio.length : 0;
-    
+      comEnvio.reduce((acc, f) => acc + differenceInBusinessDays(parseLocalDate(f.data_envio), parseLocalDate(f.data_obra)), 0) / comEnvio.length : 0;
     const tempoMedioResposta = comRetorno.length > 0 ? 
-      comRetorno.reduce((acc, f) => acc + differenceInBusinessDays(new Date(f.data_retorno_distribuidora), new Date(f.data_envio)), 0) / comRetorno.length : 0;
+      comRetorno.reduce((acc, f) => acc + differenceInBusinessDays(parseLocalDate(f.data_retorno_distribuidora), parseLocalDate(f.data_envio)), 0) / comRetorno.length : 0;
 
     const valorPorStatus = folhas.reduce((acc, f) => {
       const valor = f.valor_total || 0;
@@ -57,19 +74,23 @@ export default function DashboardFinanceiro() {
     const valorPago = valorPorStatus.pago || 0;
     const valorAguardandoAprovacao = valorPorStatus.aguardando_aprovacao || 0;
     const valorTotal = Object.values(valorPorStatus).reduce((sum, val) => sum + val, 0);
+    const valorTotalAprovado = valorAprovadoNaoPago + valorPago; // Novo cálculo
 
     const folhasAprovadas = folhas.filter(f => f.status === 'aprovado').length;
     const folhasPagas = folhas.filter(f => f.status === 'pago').length;
+    const totalFolhasAprovadas = folhasAprovadas + folhasPagas; // Novo cálculo
 
     return {
       tempoMedioEnvio: tempoMedioEnvio.toFixed(1),
       tempoMedioResposta: tempoMedioResposta.toFixed(1),
       valorAprovadoNaoPago,
       valorPago,
+      valorTotalAprovado, // Adicionar este
       valorAguardandoAprovacao,
       valorTotal,
       folhasAprovadas,
       folhasPagas,
+      totalFolhasAprovadas, // Adicionar este
       taxaAprovacao: folhas.length > 0 ? ((folhas.filter(f => f.status === 'aprovado' || f.status === 'pago').length / folhas.length) * 100).toFixed(1) : 0
     };
   }, [folhas]);
@@ -101,12 +122,12 @@ export default function DashboardFinanceiro() {
       const fimMes = endOfMonth(mes);
       
       const folhasDoMes = folhas.filter(f => 
-        f.created_date && isWithinInterval(new Date(f.created_date), { start: inicioMes, end: fimMes })
+        f.created_date && isWithinInterval(parseLocalDate(f.created_date), { start: inicioMes, end: fimMes })
       );
-      
-      const comEnvio = folhasDoMes.filter(f => f.data_obra && f.data_envio);
-      const tempoMedio = comEnvio.length > 0 ? 
-        comEnvio.reduce((acc, f) => acc + differenceInBusinessDays(new Date(f.data_envio), new Date(f.data_obra)), 0) / comEnvio.length : 0;
+
+      const comEnvio = folhasDoMes.filter(f => parseLocalDate(f.data_obra) && parseLocalDate(f.data_envio));
+      const tempoMedio = comEnvio.length > 0 ?
+        comEnvio.reduce((acc, f) => acc + differenceInBusinessDays(parseLocalDate(f.data_envio), parseLocalDate(f.data_obra)), 0) / comEnvio.length : 0;
 
       ultimosSeisMeses.push({
         mes: format(mes, "MMM/yy", { locale: ptBR }),
@@ -144,7 +165,7 @@ export default function DashboardFinanceiro() {
 
     const folhasPagas = folhas.filter(f => f.status === 'pago' && f.data_pagamento);
     folhasPagas.forEach(f => {
-      const mesPagamento = startOfMonth(new Date(f.data_pagamento));
+      const mesPagamento = startOfMonth(parseLocalDate(f.data_pagamento));
       const mesString = format(mesPagamento, "MMM/yy", { locale: ptBR });
       const index = meses.findIndex(m => m.mes === mesString);
       if (index !== -1) {
@@ -179,6 +200,30 @@ export default function DashboardFinanceiro() {
 
   const kpiCards = [
     {
+      title: "Em Análise",
+      value: (kpisFinanceiros.valorAguardandoAprovacao || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      subtitle: "Aguardando aprovação",
+      icon: Send,
+      color: "text-blue-600",
+      bgColor: "bg-blue-50"
+    },
+    {
+      title: "Aprovadas",
+      value: (kpisFinanceiros.valorTotalAprovado || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      subtitle: `${kpisFinanceiros.totalFolhasAprovadas} folhas`,
+      icon: CheckCircle,
+      color: "text-green-600",
+      bgColor: "bg-green-50"
+    },
+        {
+      title: "Pagas",
+      value: (kpisFinanceiros.valorPago || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      subtitle: `${kpisFinanceiros.folhasPagas} folhas`,
+      icon: DollarSign,
+      color: "text-purple-600",
+      bgColor: "bg-purple-50"
+    },
+    {
       title: "Tempo Médio Envio",
       value: `${kpisFinanceiros.tempoMedioEnvio} dias`,
       subtitle: "Da obra ao envio",
@@ -187,36 +232,12 @@ export default function DashboardFinanceiro() {
       bgColor: "bg-blue-50"
     },
     {
-      title: "Tempo Médio Resposta",
+      title: "Tempo Médio Retorno",
       value: `${kpisFinanceiros.tempoMedioResposta} dias`,
       subtitle: "Da distribuidora",
       icon: Hourglass,
       color: "text-orange-600",
       bgColor: "bg-orange-50"
-    },
-    {
-      title: "Aprovado (Não Pago)",
-      value: `R$ ${kpisFinanceiros.valorAprovadoNaoPago.toLocaleString('pt-BR')}`,
-      subtitle: `${kpisFinanceiros.folhasAprovadas} folhas`,
-      icon: DollarSign,
-      color: "text-green-600",
-      bgColor: "bg-green-50"
-    },
-    {
-      title: "Já Pago",
-      value: `R$ ${kpisFinanceiros.valorPago.toLocaleString('pt-BR')}`,
-      subtitle: `${kpisFinanceiros.folhasPagas} folhas`,
-      icon: CheckCircle,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50"
-    },
-    {
-      title: "Em Análise",
-      value: `R$ ${kpisFinanceiros.valorAguardandoAprovacao.toLocaleString('pt-BR')}`,
-      subtitle: "Aguardando aprovação",
-      icon: Send,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50"
     },
     {
       title: "Taxa de Aprovação",
