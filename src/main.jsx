@@ -1,14 +1,16 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'  // Adicione esta linha
+import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
-import './styles/variables.css'
+import { AuthProvider } from './context/AuthProvider' // 1. Importe o AuthProvider
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter>  {/* Adicione este wrapper */}
-      <App />
+    <BrowserRouter>
+      <AuthProvider> {/* 2. Envolva o App com o AuthProvider */}
+        <App />
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 )
