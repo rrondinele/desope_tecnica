@@ -1,5 +1,7 @@
 import React, { createContext, useState, useContext } from 'react';
 import { X } from 'lucide-react';
+import { useAuth } from '../../context/AuthProvider';
+import { Link, useLocation } from 'react-router-dom';
 
 // 1. Criar o Contexto da Sidebar
 const SidebarContext = createContext();
@@ -85,4 +87,49 @@ export function SidebarMenuButton({ children, className, asChild, ...props }) {
 
 export function SidebarFooter({ children, className }) {
   return <div className={className}>{children}</div>;
+}
+
+// ADICIONE 'export' AQUI
+export function SidebarDesktop() {
+  const { user, signOut } = useAuth();
+  const location = useLocation();
+
+  return (
+    <div className="hidden md:flex md:flex-col md:justify-between md:h-screen md:w-64 bg-white p-4 border-r">
+      {/* Logo ou Título da Sidebar */}
+      <div className="text-xl font-semibold mb-4">Minha Sidebar</div>
+
+      {/* Links da Sidebar */}
+      <div className="flex-1">
+        <Link to="/" className={`flex items-center p-2 text-gray-700 rounded-md hover:bg-gray-100 ${location.pathname === '/' ? 'bg-gray-100' : ''}`}>
+          Início
+        </Link>
+        <Link to="/sobre" className={`flex items-center p-2 text-gray-700 rounded-md hover:bg-gray-100 ${location.pathname === '/sobre' ? 'bg-gray-100' : ''}`}>
+          Sobre
+        </Link>
+        <Link to="/contato" className={`flex items-center p-2 text-gray-700 rounded-md hover:bg-gray-100 ${location.pathname === '/contato' ? 'bg-gray-100' : ''}`}>
+          Contato
+        </Link>
+      </div>
+
+      {/* Informações do Usuário e Logout */}
+      <div>
+        {user ? (
+          <div className="flex items-center justify-between p-2 bg-gray-100 rounded-md">
+            <div className="flex items-center">
+              <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full mr-2" />
+              <span className="text-gray-800 font-medium">{user.name}</span>
+            </div>
+            <button onClick={signOut} className="text-red-600 hover:underline">
+              Sair
+            </button>
+          </div>
+        ) : (
+          <Link to="/login" className="block text-center text-white bg-blue-600 hover:bg-blue-700 rounded-md p-2">
+            Fazer Login
+          </Link>
+        )}
+      </div>
+    </div>
+  );
 }
