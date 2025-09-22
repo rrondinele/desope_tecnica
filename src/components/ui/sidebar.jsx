@@ -64,3 +64,25 @@ export const SidebarContent = ({ children }) => {
     </>
   );
 };
+
+export function SidebarMenu({ children, className }) {
+  return <ul className={className}>{children}</ul>;
+}
+
+export function SidebarMenuItem({ children }) {
+  return <li>{children}</li>;
+}
+
+// MODIFIQUE ESTE COMPONENTE PARA ACEITAR E PASSAR PROPS ADICIONAIS (...props)
+export function SidebarMenuButton({ children, className, asChild, ...props }) {
+  const Comp = asChild ? 'span' : 'button';
+  return (
+    <Comp className={className} {...props}> {/* Adicione {...props} aqui */}
+      {children}
+    </Comp>
+  );
+}
+
+export function SidebarFooter({ children, className }) {
+  return <div className={className}>{children}</div>;
+}
