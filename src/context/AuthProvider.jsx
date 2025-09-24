@@ -6,73 +6,69 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true); // Começa como true
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Função para buscar a sessão e o perfil do usuário
-    const fetchUser = async () => {
+    const fetchSessionAndProfile = async () => {
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
+        // 1. Pega a sessão atual. Isso é síncrono e rápido se já estiver carregado.
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
 
         if (session) {
-          setSession(session);
+          // 2. Se houver sessão, busca o perfil.
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select(`id, full_name, role, avatar_url, matricula`)
             .eq('id', session.user.id)
             .single();
-          
+
           if (profileError) throw profileError;
           setProfile(profileData);
-        } else {
-          // Garante que se não há sessão, o perfil também é nulo
-          setProfile(null);
         }
       } catch (error) {
-        console.error("AuthProvider Error:", error);
-        // Limpa o estado em caso de erro
+        console.error("AuthProvider fetchSession Error:", error);
+        // Garante que o estado seja limpo em caso de erro
         setSession(null);
         setProfile(null);
       } finally {
-        // ESSENCIAL: Garante que o loading termine, não importa o que aconteça
+        // 3. ESSENCIAL: Marca o carregamento como concluído, independentemente do resultado.
         setLoading(false);
       }
     };
 
-    fetchUser();
+    // Executa a verificação inicial da sessão.
+    fetchSessionAndProfile();
 
-    // Listener para mudanças de estado (login/logout)
+    // 4. Configura o listener para MUDANÇAS futuras (login, logout, etc.).
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        if (session) {
-          const { data } = await supabase
-            .from('profiles')
-            .select(`id, full_name, role, avatar_url, matricula`)
-            .eq('id', session.user.id)
-            .single();
-          setProfile(data);
-        } else {
-          setProfile(null);
-        }
-        setLoading(false); // Garante que o loading termine após login/logout
+      (_event, session) => {
+        // Quando o estado de autenticação muda, atualiza a sessão e o perfil.
+        // Isso é mais simples porque a lógica de busca de perfil já está na função acima.
+        // Apenas re-executamos a função para manter o código consistente.
+        fetchSessionAndProfile();
       }
     );
 
-    // Limpa o listener ao desmontar
+    // Limpa o listener quando o componente for desmontado.
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, []); // O array de dependências pode ficar vazio agora.
 
   const value = { session, profile, loading };
 
-  // Renderiza os filhos APENAS quando o carregamento inicial terminar.
-  // Isso evita "flashes" de conteúdo e a tela branca.
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#f8fafc' }}>
+        <p style={{ fontSize: '1.2rem', color: '#475569' }}>Carregando aplicação...</p>
+      </div>
+    );
+  }
+
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

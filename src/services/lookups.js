@@ -2,7 +2,6 @@ import { supabase, hasSupabase } from '@/services/supabaseClient'
 
 export async function fetchTecnicos() {
   if (!hasSupabase()) return []
-  // tabela: light_tecnico (tecnico, matricula_light)
   const { data, error } = await supabase
     .from('light_tecnico')
     .select('tecnico, matricula_light')
