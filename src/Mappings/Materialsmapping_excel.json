@@ -1,0 +1,14 @@
+{
+  "materiaisInstalados": {
+    "descricao": "A69",
+    "lote": "E69",
+    "quantidade": "F69",
+    "origem": "G69"
+  },
+  "materiaisRetirados": {
+    "descricao": "J69",
+    "lote": "L69",
+    "quantidade": "M69",
+    "origem": "O69"
+  }
+}
