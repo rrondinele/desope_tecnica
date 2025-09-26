@@ -19,6 +19,7 @@ import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { exportFolhaById } from "@/exportTemplate/exportFolhaService";
 
 const statusConfig = {
   pendente: { label: "Pendente", color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Clock },
@@ -49,6 +50,9 @@ export default function ListaFolhas() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [profilesMap, setProfilesMap] = useState({});
+  const [exportingFolhaId, setExportingFolhaId] = useState(null);
+  const [pendingExportFolha, setPendingExportFolha] = useState(null);
+  const [exportError, setExportError] = useState(null);
 
   const [selectedFolha, setSelectedFolha] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -292,6 +296,47 @@ export default function ListaFolhas() {
     setSelectedFolha(null);
   };
 
+  const handleExportToTemplate = (folha) => {
+    if (!folha?.id) {
+      alert('Registro invalido para exportacao.');
+      return;
+    }
+
+    setExportError(null);
+    setPendingExportFolha(folha);
+  };
+
+  useEffect(() => {
+    if (!pendingExportFolha) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    async function runExport() {
+      try {
+        setExportingFolhaId(pendingExportFolha.id);
+        await exportFolhaById(pendingExportFolha.id, { fallbackData: pendingExportFolha });
+      } catch (error) {
+        console.error('Erro ao exportar folha:', error);
+        if (!isCancelled) {
+          setExportError(error?.message || 'Nao foi possivel exportar esta folha.');
+        }
+      } finally {
+        if (!isCancelled) {
+          setExportingFolhaId(null);
+          setPendingExportFolha(null);
+        }
+      }
+    }
+
+    runExport();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [pendingExportFolha]);
+
   const handleExportToCSV = () => {
     if (filteredFolhas.length === 0) {
         alert("Nenhum dado para exportar.");
@@ -396,6 +441,15 @@ const getPrazoClass = (folha) => {
 
   const renderActionButtons = (folha) => (
     <div className="flex gap-1">
+      <Button
+        variant="outline"
+        size="icon"
+        title="Exportar template"
+        onClick={() => handleExportToTemplate(folha)}
+        disabled={exportingFolhaId === folha.id}
+      >
+        <FileDown className="w-4 h-4 text-emerald-600" />
+      </Button>
       <Button
         variant="outline"
         size="icon"
@@ -516,6 +570,11 @@ const getPrazoClass = (folha) => {
           </CardContent>
         </Card>
 
+        {exportError && (
+          <div className="mb-4 rounded border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">
+            {exportError}
+          </div>
+        )}
         <Card className="shadow-lg border-0">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between mb-4 px-2">
@@ -612,6 +671,7 @@ const getPrazoClass = (folha) => {
                 <Files className="w-5 h-5 text-blue-600" />
                 Detalhes da Folha {selectedFolha?.numero_fm}
               </DialogTitle>
+              <DialogDescription>Visualize as informações completas da folha selecionada.</DialogDescription>
             </DialogHeader>
             {selectedFolha && (
               <div className="space-y-6 p-1">
@@ -872,6 +932,7 @@ const getPrazoClass = (folha) => {
           <DialogContent className="max-w-md sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Registrar Pagamento</DialogTitle>
+              <DialogDescription>Informe os dados de pagamento da folha {selectedFolha?.numero_fm}.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <Input
@@ -926,3 +987,4 @@ const getPrazoClass = (folha) => {
     </div>
   );
 }
+
