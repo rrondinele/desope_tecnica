@@ -1,0 +1,51 @@
+﻿VISÃO GERAL
+Componentiza a experiência de listagem, consulta e ações operacionais das Folhas de Medição, centralizando filtros, resumo de status e modais de atualização em uma única página coordenadora que conversa com Supabase e serviços internos.
+
+FUNCIONALIDADES PRINCIPAIS
+- Filtro dinâmico: busca por número FM/projeto e filtro de status aplicados em memória com reset automático da paginação.
+- Resumo operacional: contadores de pendentes, atrasadas e vencendo hoje calculados via regras de prazo.
+- Paginação client-side: divisão da lista em blocos de 15 itens e navegação numérica com setas.
+- Ações contextuais: exportar, visualizar, enviar, registrar retorno/pagamento e cancelar folha via componente ListaFolhaActions.
+- Modais de manutenção: formulários dedicados para envio, retorno, pagamento, cancelamento e exibição de detalhes completos.
+- Exportações: geração de CSV local conforme headers configurados e exportação individual via serviço de template.
+
+FLUXO DE USUÁRIO
+1. Usuário acessa a página e vê tabela com estatísticas e filtros já carregados após `loadFolhas()`.
+2. Ajusta busca ou status e a tabela/paginação são recalculadas localmente (`filterFolhas`).
+3. Seleciona uma ação na linha: exporta direto ou abre modal específica.
+4. Confirma os formulários; regras de negócio aplicam updates na Folha e recarregam a lista.
+5. Pode revisar detalhes completos (histórico, equipes, serviços) no modal de detalhamento.
+
+ESTADOS E PROPS
+- `folhas`/`filteredFolhas`: fonte original e lista filtrada exibida.
+- `isLoading`: controla exibição de estado de carregamento.
+- `searchTerm`, `statusFilter`: parâmetros de filtro controlados.
+- `currentPage`: índice atual da paginação.
+- `profilesMap`: cache de nomes de criadores vindos do Supabase.
+- `exportingFolhaId`, `pendingExportFolha`, `exportError`: acompanham fluxo de exportação assíncrona.
+- `selectedFolha`: item ativo para modais.
+- Flags booleanas de modais (`show*Modal`): governam visibilidade dos diálogos.
+- Form states (`envioData`, `retornoData`, `pagamentoData`, `cancelamentoData`): inputs vinculados aos formulários modais.
+
+REGAS DE NEGÓCIO
+- Validação de envio exige método obrigatório antes de mudar status para “aguardando_aprovacao”.
+- Processamento de retorno cria nova versão para reprovações, preservando histórico e clonando dados essenciais.
+- Cálculo de prazo usa dias úteis (addBusinessDays) para definir etiquetas de alerta.
+- Atualizações de status sempre registram histórico cronológico acrescentado.
+- Cancelamento requer motivo obrigatório e gera observação automática.
+
+INTEGRAÇÕES
+- Supabase (`FolhaMedicao`, tabela `profiles`) para CRUD e resolução de autores.
+- Serviço `exportFolhaById` (template/export) para exportação Excel/JSON.
+- Utilitários `date-fns` (format, differenceInBusinessDays) e `framer-motion` para UI/ux.
+
+COMPONENTES INTERNOS
+- `ListaFolhaActions`: renders os botões de ação com lógica condicional.
+- `ListaStatusBadge`: badge estilizado de status conforme `STATUS_CONFIG`.
+- `ListaHistoricoTimeline`: timeline de eventos da folha.
+- `ListaPagination`: controles de paginação (setas + números).
+- Modais (Dialogs) compostos com inputs/selects/textarea das bibliotecas UI locais.
+
+TRATAMENTO DE ERROS
+- `loadFolhas`, `handleEnviarFolha`, `handleProcessarRetorno`, `handleRegistrarPagamento`, `handleCancelarFolha`, exportações: envoltos em try/catch com `console.error` e `alert` informando falha ao usuário.
+- Exportação assíncrona cancela estados pendentes no cleanup para evitar updates após unmount.

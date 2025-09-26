@@ -1,0 +1,42 @@
+﻿.lista-folhas-page {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .lista-folhas-page {
+    padding: 2rem;
+  }
+}
+
+.lista-folhas-container {
+  margin: 0 auto;
+  width: 100%;
+  max-width: 1800px;
+}
+
+.lista-folhas-header {
+  margin-bottom: 2rem;
+}
+
+.lista-folhas-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.lista-folhas-summary__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lista-folhas-summary__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+}
