@@ -182,14 +182,14 @@ export default function ServicosStep({ data, updateData }) {
           )}
           
           <div className="mt-4">
-            <Button 
-              onClick={adicionarServico} 
-              disabled={!novoServico.descricao || novoServico.quantidade <= 0}
-              className="w-full bg-gray-900 hover:bg-gray-800 text-white disabled:bg-slate-400 disabled:cursor-not-allowed"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Adicionar Serviço
-            </Button>
+          <Button 
+            onClick={adicionarServico} 
+            disabled={!novoServico.descricao || novoServico.quantidade <= 0}
+            className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Adicionar Serviço
+          </Button>
           </div>
         </CardContent>
       </Card>

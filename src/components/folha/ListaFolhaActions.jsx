@@ -15,7 +15,7 @@ const FolhaActions = ({
   if (!folha) return null;
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-1">
+    <div className="flex flex-nowrap overflow-x-auto gap-1 py-1  justify-left">
       <Button
         variant="outline"
         size="icon"

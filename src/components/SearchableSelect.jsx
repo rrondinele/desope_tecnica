@@ -15,6 +15,10 @@ export default function SearchableSelect({
   selectionOnly = true,
   getLabel,
   getValue,
+  // 🔽 NOVO
+  where = [],                  // [{ column, operator:'ilike'|'eq'|'in'|..., value }]
+  exclude,                     // { column:'matricula_ceneged', values:[...] }
+  maxRows = 50,                // opcional
 }) {
   const [query, setQuery] = useState(controlledValue || '')
   const [items, setItems] = useState([])
@@ -31,26 +35,74 @@ export default function SearchableSelect({
 
   useEffect(() => {
     let ignore = false
+
     async function run() {
       if (!supabase || !tableName || !columnName) return
-      const q = supabase
+
+      let q = supabase
         .from(tableName)
         .select(cols)
-        .order(columnName)
-        .limit(20)
-      const searchTerm = columnName === 'tecnico' && typeof query === 'string'
-        ? query.split(',')[0]?.trim() ?? ''
-        : query
+        .order(columnName, { ascending: true })
+        .limit(maxRows)
 
-      const { data, error } = searchTerm
-        ? await q.ilike(columnName, `%${searchTerm}%`)
-        : await q
-      if (error) return
+      // 🔎 termo de busca (sempre na columnName)
+      const searchTerm =
+        columnName === 'tecnico' && typeof query === 'string'
+          ? query.split(',')[0]?.trim() ?? ''
+          : query
+
+      if (searchTerm) {
+        q = q.ilike(columnName, `%${searchTerm}%`)
+      }
+
+      // 🔽 aplica filtros AND vindos do pai
+      if (Array.isArray(where)) {
+        for (const f of where) {
+          if (!f?.column) continue
+          const op = (f.operator || 'eq').toLowerCase()
+          const val = f.value
+          if (op === 'ilike') q = q.ilike(f.column, String(val))
+          else if (op === 'eq') q = q.eq(f.column, val)
+          else if (op === 'neq') q = q.neq(f.column, val)
+          else if (op === 'gte') q = q.gte(f.column, val)
+          else if (op === 'lte') q = q.lte(f.column, val)
+          else if (op === 'gt') q = q.gt(f.column, val)
+          else if (op === 'lt') q = q.lt(f.column, val)
+          else if (op === 'in') q = q.in(f.column, Array.isArray(val) ? val : [])
+          else q = q.filter(f.column, op, val)
+        }
+      }
+
+      // 🚫 excluir valores já usados
+      if (exclude?.column && Array.isArray(exclude.values) && exclude.values.length > 0) {
+        // supabase-js exige string '(v1,v2,...)' para o operador IN quando usado via .not
+        const list = '(' + exclude.values
+          .map(v => `'${String(v).replace(/'/g, "''")}'`)
+          .join(',') + ')'
+        q = q.not(exclude.column, 'in', list)
+      }
+
+      const { data, error } = await q
+      if (error) {
+        console.error('SearchableSelect error:', error)
+        if (!ignore) setItems([])
+        return
+      }
       if (!ignore) setItems(data || [])
     }
+
     run()
     return () => { ignore = true }
-  }, [tableName, columnName, cols, query])
+  // 🔁 reexecuta quando filtros/exclusões mudam
+  }, [
+    tableName,
+    columnName,
+    cols,
+    maxRows,
+    query,
+    JSON.stringify(where || []),
+    JSON.stringify(exclude || {})
+  ])
 
   useEffect(() => {
     function onDocClick(e) {
@@ -93,9 +145,9 @@ export default function SearchableSelect({
         onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
         onBlur={() => { if (selectionOnly && query !== selectedLabel) setQuery(selectedLabel || '') }}
       />
-      {open && items?.length > 0 && (
+      {open && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-white shadow-lg">
-          {items.map((row, idx) => (
+          {items?.length > 0 ? items.map((row, idx) => (
             <button
               key={idx}
               type="button"
@@ -104,9 +156,13 @@ export default function SearchableSelect({
             >
               {getLabel
                 ? getLabel(row)
-                : (columnName === 'tecnico' && row?.matricula_light ? `${row.tecnico}, ${row.matricula_light}` : row[columnName])}
+                : (columnName === 'tecnico' && row?.matricula_light
+                    ? `${row.tecnico}, ${row.matricula_light}`
+                    : row[columnName])}
             </button>
-          ))}
+          )) : (
+            <div className="px-3 py-2 text-sm text-gray-500">Nenhum resultado</div>
+          )}
         </div>
       )}
     </div>

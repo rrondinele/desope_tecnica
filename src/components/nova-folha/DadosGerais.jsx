@@ -223,7 +223,16 @@ export default function DadosGerais({ data, updateData }) {
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="circuito" className="text-sm font-semibold text-slate-700">Circuito</Label>
-                    <Input id="circuito" value={data.circuito || ''} onChange={e => handleInputChange('circuito', e.target.value)}  placeholder="LDA/LSA" className="border-slate-300" />
+                    {/*<Input id="circuito" value={data.circuito || ''} onChange={e => handleInputChange('circuito', e.target.value)}  placeholder="LDA/LSA" className="border-slate-300" />*/}
+                    <SearchableSelect
+                      id="circuito"
+                      tableName="light_lda"
+                      columnName="alimentador"
+                      placeholder="LDA/LSA"
+                      value={data.circuito || ''}
+                      onValueChange={(val) => handleInputChange('circuito', val)}
+                      className="w-full"
+                    />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="reserva" className="text-sm font-semibold text-slate-700">Reserva</Label>

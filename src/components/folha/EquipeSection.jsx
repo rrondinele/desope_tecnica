@@ -10,9 +10,19 @@ import SearchableSelect from "@/components/SearchableSelect";
 
 // Lista de códigos de equipe
 const codigosEquipe = [
-  "EXP001", "EXP002", "EXP003", "EXP004", "EXP005",
-  "MAN001", "MAN002", "MAN003", "MAN004", "MAN005"
+  "EX001", "EX002", "EX003", "EX004", "EX005", "EX007", "EX011", "EX012", "EX014", "EX015", "EX018", 
+  "MT001", "MT002", "MT003", "MT004", "MT005",
+  "LV001", "LV002"
 ];
+
+function deptoFromCodigo(cod) {
+  if (!cod) return null;
+  const p = cod.slice(0, 2).toUpperCase();
+  if (p === 'EX') return 'EXPANSÃO';
+  if (p === 'MT') return 'MANUTENÇÃO';
+  if (p === 'LV') return 'LINHA VIVA';
+  return null;
+}
 
 export default function EquipeSection({ equipes, onChange }) {
   const [novaEquipe, setNovaEquipe] = useState({
@@ -21,13 +31,24 @@ export default function EquipeSection({ equipes, onChange }) {
     motorista: '',
     eletricistas: []
   });
+  const [eletricistaInput, setEletricistaInput] = useState('');
+
+  // Verifica se o código da equipe foi selecionado
+  const isCodigoSelecionado = !!novaEquipe.codigo_equipe;
 
   const adicionarEletricista = (eletricista) => {
+    if (!eletricista) return;
+    if (novaEquipe.eletricistas.length >= 4) {
+      alert('Limite de 4 eletricistas por equipe atingido.');
+      setEletricistaInput('');
+      return;
+    }
     if (eletricista && !novaEquipe.eletricistas.includes(eletricista)) {
       setNovaEquipe(prev => ({
         ...prev,
         eletricistas: [...prev.eletricistas, eletricista]
       }));
+      setEletricistaInput('');
     }
   };
 
@@ -59,6 +80,20 @@ export default function EquipeSection({ equipes, onChange }) {
   // Funções para formatar o label e o valor para o SearchableSelect
   const getColaboradorLabel = (row) => row ? `${row.matricula_ceneged} - ${row.nome}` : '';
   const getColaboradorValue = (row) => row ? `${row.matricula_ceneged} - ${row.nome}` : '';
+  // Filtros derivados do código da equipe
+  const departamento = deptoFromCodigo(novaEquipe.codigo_equipe);
+  const whereDepto = departamento ? [{ column: 'descricao_departamento', operator: 'ilike', value: `%${departamento}%` }] : [];
+  // Excluir colaboradores já escolhidos nesta folha
+  const usados = new Set();
+  (equipes || []).forEach(eq => {
+    if (eq.encarregado) usados.add(String(eq.encarregado.split(' - ')[0]));
+    if (eq.motorista) usados.add(String(eq.motorista.split(' - ')[0]));
+    (eq.eletricistas || []).forEach(e => usados.add(String(e.split(' - ')[0])));
+  });
+  if (novaEquipe.encarregado) usados.add(String(novaEquipe.encarregado.split(' - ')[0]));
+  if (novaEquipe.motorista) usados.add(String(novaEquipe.motorista.split(' - ')[0]));
+  (novaEquipe.eletricistas || []).forEach(e => usados.add(String(e.split(' - ')[0])));
+  const excludeProp = { column: 'matricula_ceneged', values: Array.from(usados) };
 
   return (
     <div className="space-y-2">
@@ -75,7 +110,6 @@ export default function EquipeSection({ equipes, onChange }) {
               <Label htmlFor="codigo_equipe" className="text-sm font-semibold text-slate-700">
                 Código da Equipe *
               </Label>
-              {/* SUBSTITUIR O INPUT PELO SELECT */}
               <Select
                 value={novaEquipe.codigo_equipe}
                 onValueChange={(val) => setNovaEquipe(prev => ({ ...prev, codigo_equipe: val }))}
@@ -97,37 +131,41 @@ export default function EquipeSection({ equipes, onChange }) {
               <Label htmlFor="encarregado" className="text-sm font-semibold text-slate-700">
                 Encarregado *
               </Label>
-              {/* 2. Substituir Input por SearchableSelect */}
               <SearchableSelect
                 id="encarregado"
                 tableName="cen_colaboradores"
                 columnName="nome"
-                selectColumns="matricula_ceneged, nome"
-                where={{ column: 'funcao', operator: 'ilike', value: '%ENCARREGADO%' }}
+                selectColumns="matricula_ceneged, nome, funcao, descricao_departamento"
+                where={[{ column: 'funcao', operator: 'ilike', value: '%ENCARREGADO%' }, ...whereDepto]}
+                exclude={excludeProp}
                 placeholder="Pesquisar encarregado..."
                 value={novaEquipe.encarregado}
                 onValueChange={(val) => setNovaEquipe(prev => ({ ...prev, encarregado: val }))}
                 getLabel={getColaboradorLabel}
                 getValue={getColaboradorValue}
+                disabled={!isCodigoSelecionado} // 🔒 Desabilita se não tiver código
+                className={!isCodigoSelecionado ? "opacity-50 cursor-not-allowed" : ""}
               />
             </div>
 
             <div className="space-y-2 md:col-span-5">
               <Label htmlFor="motorista" className="text-sm font-semibold text-slate-700">
-                Motorista
+                Motorista *
               </Label>
-              {/* 3. Substituir Input por SearchableSelect */}
               <SearchableSelect
                 id="motorista"
                 tableName="cen_colaboradores"
                 columnName="nome"
-                selectColumns="matricula_ceneged, nome"
-                where={{ column: 'funcao', operator: 'ilike', value: '%MOTORISTA%' }}
+                selectColumns="matricula_ceneged, nome, funcao, descricao_departamento"
+                where={[{ column: 'funcao', operator: 'ilike', value: '%MOTORISTA%' }, ...whereDepto]}
+                exclude={excludeProp}
                 placeholder="Pesquisar motorista..."
                 value={novaEquipe.motorista}
                 onValueChange={(val) => setNovaEquipe(prev => ({ ...prev, motorista: val }))}
                 getLabel={getColaboradorLabel}
                 getValue={getColaboradorValue}
+                disabled={!isCodigoSelecionado} 
+                className={!isCodigoSelecionado ? "opacity-50 cursor-not-allowed" : ""}
               />
             </div>
           </div>
@@ -138,18 +176,20 @@ export default function EquipeSection({ equipes, onChange }) {
               Eletricistas da Equipe *
             </Label>
             <div className="flex gap-3">
-              {/* 4. Substituir Select por SearchableSelect */}
               <SearchableSelect
                 id="eletricista-multi-select" // <-- Dê um ID específico
                 tableName="cen_colaboradores"
                 columnName="nome"
-                selectColumns="matricula_ceneged, nome"
-                where={{ column: 'funcao', operator: 'ilike', value: '%ELETRICISTA%' }}
+                selectColumns="matricula_ceneged, nome, funcao, descricao_departamento"
+                where={[{ column: 'funcao', operator: 'ilike', value: '%ELETRICISTA%' }, ...whereDepto]}
+                exclude={excludeProp}
                 placeholder="Pesquisar e adicionar eletricista..."
+                value={eletricistaInput}
                 onValueChange={(val) => adicionarEletricista(val)}
                 getLabel={getColaboradorLabel}
                 getValue={getColaboradorValue}
-                className="w-full"
+                disabled={!isCodigoSelecionado}
+                className={`w-full ${!isCodigoSelecionado ? "opacity-50 cursor-not-allowed" : ""}`}
               />
             </div>
 
@@ -170,7 +210,12 @@ export default function EquipeSection({ equipes, onChange }) {
           </div>
 
           <div className="pt-6 w-full">
-            <Button onClick={adicionarEquipe} disabled={!novaEquipe.codigo_equipe || !novaEquipe.encarregado || novaEquipe.eletricistas.length === 0} className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold">
+            <Button 
+              onClick={adicionarEquipe} 
+              disabled={!novaEquipe.codigo_equipe || !novaEquipe.encarregado || novaEquipe.eletricistas.length === 0} 
+              className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold"
+            >
+              <Plus className="w-4 h-4 mr-2" />
               Adicionar Equipe
             </Button>
           </div>
