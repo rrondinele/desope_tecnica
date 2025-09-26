@@ -25,7 +25,7 @@ const EquipamentoForm = ({ onAdd }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label className="text-sm font-semibold text-slate-700">Serial do Equipamento *</Label>
-          <Input value={equipamento.serial} onChange={(e) => setEquipamento(p => ({...p, serial: e.target.value}))} placeholder="Número de série" className="border-slate-300 font-mono" />
+          <Input value={equipamento.serial} onChange={(e) => setEquipamento(p => ({...p, serial: e.target.value}))} placeholder="Número de série" className="border-slate-300" />
         </div>
         <div className="space-y-2">
           <Label className="text-sm font-semibold text-slate-700">Nº LP</Label>

@@ -3,17 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// Select removido: usando SearchableSelect com Supabase
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { DollarSign, Plus, Trash2, Calculator } from "lucide-react";
 import SearchableSelect from "@/components/SearchableSelect";
 
-
-
 export default function ServicosStep({ data, updateData }) {
   const [novoServico, setNovoServico] = useState({
     codigo: '',
+    codigo_mestre: '',
     descricao: '',
+    descricao_exibicao: '',
     unidade: '',
     unidade_medida: '',
     dispendio: '',
@@ -58,7 +57,9 @@ export default function ServicosStep({ data, updateData }) {
     setNovoServico(prev => ({
       ...prev,
       codigo: row.codigo_mestre || '',
-      descricao: label,
+      codigo_mestre: row.codigo_mestre || '',
+      descricao: row.descricao_item || '',
+      descricao_exibicao: label,
       unidade: row.unidade_medida || '',
       unidade_medida: row.unidade_medida || '',
       dispendio: row.dispendio || '',
@@ -66,9 +67,6 @@ export default function ServicosStep({ data, updateData }) {
       quantidade: prev.quantidade || 1,
     }));
   };
-
-  // handler do Select est�tico removido
-
   
   const handleQuantidadeChange = (quantidade) => {
     const qtd = parseFloat(quantidade) || 0;
@@ -91,8 +89,10 @@ export default function ServicosStep({ data, updateData }) {
 
       // Reseta o formulário mantendo a quantidade (para UX)
       setNovoServico({
-        codigo: '', 
-        descricao: '', 
+        codigo: '',
+        codigo_mestre: '',
+        descricao: '',
+        descricao_exibicao: '',
         unidade: '', 
         valor_unitario: 0, 
         quantidade: novoServico.quantidade // Mantém a quantidade para próximo serviço
@@ -121,7 +121,7 @@ export default function ServicosStep({ data, updateData }) {
                 columnName="descricao_item"
                 selectColumns="codigo_mestre,descricao_item,preco,unidade_medida,dispendio"
                 placeholder="Pesquisar serviço..."
-                value={novoServico.descricao}
+                value={novoServico.descricao_exibicao}
                 onValueChange={handleServicoSelectDb}
                 getLabel={(row) => row ? `${row.codigo_mestre} - ${row.descricao_item}` : ''}
                 getValue={(row) => row ? `${row.codigo_mestre} - ${row.descricao_item}` : ''}
@@ -219,7 +219,7 @@ export default function ServicosStep({ data, updateData }) {
                 <TableBody>
                   {data.servicos.map((servico) => (
                     <TableRow key={servico.id}>
-                      <TableCell className="font-medium">{servico.descricao}</TableCell>
+                      <TableCell className="font-medium">{servico.codigo_mestre ? `${servico.codigo_mestre} - ${servico.descricao}` : servico.descricao}</TableCell>
                       <TableCell className="text-center">{servico.quantidade}</TableCell>
                       <TableCell className="text-center">{servico.unidade_medida || servico.unidade}</TableCell>
                       <TableCell className="text-center">{servico.dispendio || ''}</TableCell>

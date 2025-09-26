@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
+import { supabase, hasSupabase } from "@/services/supabaseClient";
 import { FolhaMedicao } from "@/entities/FolhaMedicao";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +48,7 @@ export default function ListaFolhas() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [profilesMap, setProfilesMap] = useState({});
 
   const [selectedFolha, setSelectedFolha] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -70,6 +72,21 @@ export default function ListaFolhas() {
     try {
       const data = await FolhaMedicao.list("-created_date");
       setFolhas(data);
+      // Enriquecer com display_name do autor
+      if (hasSupabase()) {
+        const ids = Array.from(new Set((data || []).map(f => f.created_by_user_id).filter(Boolean)));
+        if (ids.length) {
+          const { data: profs } = await supabase
+            .from('profiles')
+            .select('id, display_name, full_name, matricula')
+            .in('id', ids);
+          const map = {};
+          (profs || []).forEach(p => { map[p.id] = p.display_name || p.full_name || ''; });
+          setProfilesMap(map);
+        } else {
+          setProfilesMap({});
+        }
+      }
     } catch (error) { console.error("Erro ao carregar folhas:", error); }
     setIsLoading(false);
   }, []);
@@ -108,7 +125,7 @@ export default function ListaFolhas() {
 
   const handleEnviarFolha = async () => {
     if (!envioData.metodo_envio) {
-      alert('Por favor, selecione o método de envio.');
+      alert('Por favor, selecione o mÃƒÂ©todo de envio.');
       return;
     }
 
@@ -145,9 +162,9 @@ export default function ListaFolhas() {
         ...dataRetorno,
         tipo_motivo_reprovacao: retornoData.tipo_motivo_reprovacao,
         motivo_reprovacao: retornoData.motivo_reprovacao,
-        // NÃO incluir observacoes aqui para não alterar o histórico na folha original
+        // NÃƒÆ’O incluir observacoes aqui para nÃƒÂ£o alterar o histÃƒÂ³rico na folha original
       };
-      
+
       // Usar diretamente FolhaMedicao.update SEM a função updateStatus (que alteraria o histórico)
       await FolhaMedicao.update(selectedFolha.id, reprovacaoDataOriginal);
 
@@ -206,12 +223,12 @@ export default function ListaFolhas() {
         materiais_instalados: selectedFolha.materiais_instalados || [],
         materiais_retirados: selectedFolha.materiais_retirados || [],
         
-        // Novos campos para a versão corrigida
+        // Novos campos para a versÃƒÂ£o corrigida
         status: 'pendente',
         versao: novaVersao,
         folha_original_id: selectedFolha.folha_original_id || selectedFolha.id,
         eh_correcao: true,
-        status_historico: historicoCompleto, // Histórico completo construído acima
+        status_historico: historicoCompleto, // HistÃƒÂ³rico completo construÃƒÂ­do acima
         
         // Limpar campos de processo (para poder reenviar)
         data_envio: null,
@@ -239,7 +256,7 @@ export default function ListaFolhas() {
         
         await loadFolhas(); // Recarregar a lista
         
-        // Redirecionar para EDIÇÃO da nova folha, não para clonagem
+        // Redirecionar para EDIÃƒâ€¡ÃƒÆ’O da nova folha, nÃƒÂ£o para clonagem
         if(novaFolha && novaFolha.id) {
           navigate(createPageUrl(`NovaFolha?editId=${novaFolha.id}`));
         }
@@ -303,7 +320,7 @@ export default function ListaFolhas() {
         f.data_pagamento ? format(new Date(f.data_pagamento), 'dd/MM/yyyy') : '',
         f.numero_pagamento || '',
         f.motivo_cancelamento || ''
-    ].map(item => `"${String(item).replace(/"/g, '""')}"`).join(';')); // Usando ponto e vírgula e aspas para melhor compatibilidade com Excel em português
+    ].map(item => `"${String(item).replace(/"/g, '""')}"`).join(';')); // Usando ponto e vÃƒÂ­rgula e aspas para melhor compatibilidade com Excel em portuguÃƒÂªs
 
     const csvContent = "\uFEFF" + headers.map(item => `"${String(item).replace(/"/g, '""')}"`).join(';') + "\n"
         + rows.join("\n");
@@ -319,18 +336,25 @@ export default function ListaFolhas() {
     URL.revokeObjectURL(url);
   };
 
-  const getPrazoClass = (folha) => {
+const getPrazoClass = (folha) => {
     if (folha.status !== 'pendente' || !folha.data_obra) return ""; 
     const obraDate = parseLocalDate(folha.data_obra);
     if (!obraDate || Number.isNaN(obraDate.getTime())) return "";
+    
     const hoje = new Date();
     const dueDate = addBusinessDays(obraDate, 2);
     const diasRestantes = differenceInBusinessDays(dueDate, hoje);
+    
     if (diasRestantes < 0) return { className: "bg-red-100", icon: AlertOctagon, text: "Atrasado" };
     if (diasRestantes === 0) return { className: "bg-orange-100", icon: AlertTriangle, text: "Vence Hoje" };
-    if (diasRestantes === 1) return { className: "bg-yellow-100", icon: Clock, text: "Falta 1 dia" };
+    if (diasRestantes >= 1) return { 
+        className: diasRestantes === 1 ? "bg-yellow-100" : "bg-blue-100", 
+        icon: Clock, 
+        text: diasRestantes === 1 ? "Falta 1 dia" : `Faltam ${diasRestantes} dias` 
+    };
+    
     return "";
-  };
+};
 
   // Helper para contagem no resumo
   const getPrazoStatus = (folha) => {
@@ -354,7 +378,7 @@ export default function ListaFolhas() {
     return <Badge variant="secondary" className={`${config.color} border font-medium`}><Icon className="w-3 h-3 mr-1" />{config.label}</Badge>;
   };
 
-  // Evita regressão de um dia ao exibir datas 'YYYY-MM-DD' (trata como local)
+  // Evita regressÃƒÂ£o de um dia ao exibir datas 'YYYY-MM-DD' (trata como local)
   const parseLocalDate = (str) => {
     if (!str) return null;
     if (typeof str === 'string') {
@@ -414,7 +438,7 @@ export default function ListaFolhas() {
   );
 
   const renderHistoricoTimeline = (historico) => {
-    if (!historico || historico.length === 0) return <p className="text-gray-500 text-sm">Nenhum histórico disponível.</p>;
+    if (!historico || historico.length === 0) return <p className="text-gray-500 text-sm">Nenhum histÃƒÂ³rico disponÃƒÂ­vel.</p>;
 
     return (
       <div className="space-y-3">
@@ -526,6 +550,7 @@ export default function ListaFolhas() {
                   <TableHead className="w-64">Data Retorno</TableHead>
                   <TableHead className="w-80">Status</TableHead>
                   <TableHead className="w-64">Prazo</TableHead>
+                  <TableHead className="w-64">Criado por</TableHead>
                   <TableHead className="w-64">Valor</TableHead>
                   <TableHead className="w-64">Ações</TableHead>
                 </TableRow>
@@ -566,6 +591,7 @@ export default function ListaFolhas() {
                           </div>
                         )}
                       </TableCell>
+                      <TableCell>{profilesMap[folha.created_by_user_id] || folha.created_by_name || '-'}</TableCell>
                       <TableCell className="text-left font-semibold">
                         {(folha.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </TableCell>
@@ -604,13 +630,14 @@ export default function ListaFolhas() {
                         : 'N/A'}
                     </div>
                     <div><strong>Status Atual:</strong> {renderStatusBadge(selectedFolha.status)}</div>
+                    <div><strong>Criado por:</strong> {selectedFolha.created_by_matricula && selectedFolha.created_by_name ? `${selectedFolha.created_by_matricula} - ${selectedFolha.created_by_name}` : (selectedFolha.created_by_name || '-')}</div>
                   </CardContent>
                 </Card>
 
                 {/* Valores Financeiros */}
                 {(selectedFolha.valor_total !== undefined && selectedFolha.valor_total !== null) && (
                   <Card className="bg-green-50 border-green-200">
-                    <CardHeader><CardTitle className="text-base text-green-800">Informações Financeiras</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="text-base text-green-800">InformAções Financeiras</CardTitle></CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold text-green-700">
                         R$ {selectedFolha.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -680,8 +707,8 @@ export default function ListaFolhas() {
                 )}
 
 
-                {/* Histórico */}
-                <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><History className="w-4 h-4" /> Histórico da Folha</CardTitle></CardHeader>
+                {/* HistÃƒÂ³rico */}
+                <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><History className="w-4 h-4" /> HistÃƒÂ³rico da Folha</CardTitle></CardHeader>
                   <CardContent>
                     {renderHistoricoTimeline(selectedFolha.status_historico)}
                   </CardContent>
@@ -713,10 +740,10 @@ export default function ListaFolhas() {
                 />
               </div>
               <div>
-                <label className="text-sm font-semibold mb-2 block">Método de Envio *</label>
+                <label className="text-sm font-semibold mb-2 block">MÃƒÂ©todo de Envio *</label>
                 <Select value={envioData.metodo_envio} onValueChange={(v) => setEnvioData({...envioData, metodo_envio: v})}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione o método" />
+                    <SelectValue placeholder="Selecione o mÃƒÂ©todo" />
                   </SelectTrigger>
                   <SelectContent position="popper">
                     <SelectItem value="E-mail">
@@ -823,7 +850,7 @@ export default function ListaFolhas() {
               {retornoData.parecer === 'aprovado' && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <p className="text-sm text-green-800">
-                    <strong>Sucesso:</strong> A folha será marcada como aprovada e ficará disponível para registro de pagamento.
+                    <strong>Sucesso:</strong> A folha serÃƒÂ¡ marcada como aprovada e ficarÃƒÂ¡ disponÃƒÂ­vel para registro de pagamento.
                   </p>
                 </div>
               )}
@@ -848,7 +875,7 @@ export default function ListaFolhas() {
             </DialogHeader>
             <div className="space-y-4">
               <Input
-                placeholder="Número da Nota Fiscal"
+                placeholder="NÃƒÂºmero da Nota Fiscal"
                 value={pagamentoData.numero_pagamento}
                 onChange={(e) => setPagamentoData({...pagamentoData, numero_pagamento: e.target.value})}
               />

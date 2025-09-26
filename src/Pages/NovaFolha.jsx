@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/context/AuthProvider";
 import { FolhaMedicao } from "@/entities/FolhaMedicao"; 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import MateriaisSection from "../components/folha/MateriaisSection";
 import Revisao from "../components/nova-folha/Revisao";
 
 export default function NovaFolha() {
+  const { session, profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
@@ -188,7 +190,12 @@ export default function NovaFolha() {
       if (cleanedPayload.id) {
         await FolhaMedicao.update(cleanedPayload.id, cleanedPayload);
       } else {
-        await FolhaMedicao.create(cleanedPayload);
+        const createdBy = {
+          created_by_user_id: session?.user?.id || null,
+          created_by_matricula: profile?.matricula || null,
+          created_by_name: profile?.full_name || null,
+        };
+        await FolhaMedicao.create({ ...cleanedPayload, ...createdBy });
       }
       try {
         if (hasSupabase()) {

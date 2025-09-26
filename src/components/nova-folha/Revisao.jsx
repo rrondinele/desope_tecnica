@@ -1,5 +1,6 @@
 
 import React, { useState } from "react";
+import { useAuth } from "@/context/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +31,8 @@ const SectionCard = ({ title, icon: Icon, children }) => (
 );
 
 export default function Revisao({ data, onPrevious }) { // Removemos onSave e isSaving dos props
-  const [isSaving, setIsSaving] = useState(false); // Agora o estado é interno
+  const { session, profile } = useAuth();
+  const [isSaving, setIsSaving] = useState(false); // Agora o estado Ã© interno
   const navigate = useNavigate();
 
   const handleSubmit = async (finalStatus) => {
@@ -38,8 +40,11 @@ export default function Revisao({ data, onPrevious }) { // Removemos onSave e is
 
     const finalData = {
       ...data,
-      id: new Date().getTime(), // Gera um ID único
-      created_date: new Date().toISOString(), // Data de criação
+      created_by_user_id: session?.user?.id || null,
+      created_by_matricula: profile?.matricula || null,
+      created_by_name: profile?.full_name || null,
+      id: new Date().getTime(), // Gera um ID Ãºnico
+      created_date: new Date().toISOString(), // Data de criaÃ§Ã£o
       status: finalStatus,
       status_historico: [
         ...(data.status_historico || []),
@@ -52,7 +57,7 @@ export default function Revisao({ data, onPrevious }) { // Removemos onSave e is
       ]
     };
 
-    // Usa a função do localStorage em vez de uma prop
+    // Usa a funÃ§Ã£o do localStorage em vez de uma prop
     await FolhaMedicao.create(finalData);
 
    // Simula um tempo de salvamento e redireciona
@@ -60,7 +65,7 @@ export default function Revisao({ data, onPrevious }) { // Removemos onSave e is
       alert('Folha salva com sucesso no armazenamento local!');
       setIsSaving(false);
       navigate(createPageUrl('ListaFolhas'));
-    }, 500); // Meio segundo para o usuário ver o feedback
+    }, 500); // Meio segundo para o usuÃ¡rio ver o feedback
   };
   
   return (
@@ -82,6 +87,7 @@ export default function Revisao({ data, onPrevious }) { // Removemos onSave e is
               <InfoItem label="Data da Obra" value={data.data_obra ? format(new Date(data.data_obra), 'dd/MM/yyyy') : 'N/A'} />
               <InfoItem label="Município" value={data.municipio} />
               <InfoItem label="Endereço" value={data.endereco} />
+              <InfoItem label="Criado por" value={(data.created_by_matricula && data.created_by_name) ? `${data.created_by_matricula} - ${data.created_by_name}` : (profile ? `${profile.matricula || ''} - ${profile.full_name || ''}` : 'N/A')} />
             </div>
           </SectionCard>
 

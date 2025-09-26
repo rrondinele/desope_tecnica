@@ -29,7 +29,7 @@ const MaterialForm = ({ onAdd }) => {
         </div>
         <div className="space-y-2">
           <Label className="text-sm font-semibold text-slate-700">Lote</Label>
-          <Input value={material.lote} onChange={(e) => setMaterial(p => ({ ...p, lote: e.target.value }))} placeholder="Número do lote" className="border-slate-300 font-mono" />
+          <Input value={material.lote} onChange={(e) => setMaterial(p => ({ ...p, lote: e.target.value }))} placeholder="Número do lote" className="border-slate-300" />
         </div>
         <div className="space-y-2">
           <Label className="text-sm font-semibold text-slate-700">Quantidade *</Label>
