@@ -166,7 +166,6 @@ export default function ListaFolhas() {
         ...dataRetorno,
         tipo_motivo_reprovacao: retornoData.tipo_motivo_reprovacao,
         motivo_reprovacao: retornoData.motivo_reprovacao,
-        // NÃƒÆ’O incluir observacoes aqui para nÃƒÂ£o alterar o histÃƒÂ³rico na folha original
       };
 
       // Usar diretamente FolhaMedicao.update SEM a função updateStatus (que alteraria o histórico)
@@ -232,7 +231,7 @@ export default function ListaFolhas() {
         versao: novaVersao,
         folha_original_id: selectedFolha.folha_original_id || selectedFolha.id,
         eh_correcao: true,
-        status_historico: historicoCompleto, // HistÃƒÂ³rico completo construÃƒÂ­do acima
+        status_historico: historicoCompleto, 
         
         // Limpar campos de processo (para poder reenviar)
         data_envio: null,
@@ -492,7 +491,7 @@ const getPrazoClass = (folha) => {
   );
 
   const renderHistoricoTimeline = (historico) => {
-    if (!historico || historico.length === 0) return <p className="text-gray-500 text-sm">Nenhum histÃƒÂ³rico disponÃƒÂ­vel.</p>;
+    if (!historico || historico.length === 0) return <p className="text-gray-500 text-sm">Nenhum histórico disponível.</p>;
 
     return (
       <div className="space-y-3">
@@ -767,8 +766,8 @@ const getPrazoClass = (folha) => {
                 )}
 
 
-                {/* HistÃƒÂ³rico */}
-                <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><History className="w-4 h-4" /> HistÃƒÂ³rico da Folha</CardTitle></CardHeader>
+                {/* Histórico */}
+                <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><History className="w-4 h-4" /> Histórico da Folha</CardTitle></CardHeader>
                   <CardContent>
                     {renderHistoricoTimeline(selectedFolha.status_historico)}
                   </CardContent>
