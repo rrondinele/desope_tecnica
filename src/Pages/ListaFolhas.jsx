@@ -443,7 +443,7 @@ const getPrazoClass = (folha) => {
       <Button
         variant="outline"
         size="icon"
-        title="Exportar template"
+        title="Exportar Folha de Medição"
         onClick={() => handleExportToTemplate(folha)}
         disabled={exportingFolhaId === folha.id}
       >
@@ -696,7 +696,7 @@ const getPrazoClass = (folha) => {
                 {/* Valores Financeiros */}
                 {(selectedFolha.valor_total !== undefined && selectedFolha.valor_total !== null) && (
                   <Card className="bg-green-50 border-green-200">
-                    <CardHeader><CardTitle className="text-base text-green-800">InformAções Financeiras</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="text-base text-green-800">Informações Financeiras</CardTitle></CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold text-green-700">
                         R$ {selectedFolha.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
