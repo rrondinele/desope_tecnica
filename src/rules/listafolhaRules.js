@@ -32,7 +32,7 @@ export const getPrazoStatus = (folha) => {
   return "outros";
 };
 
-export const updateStatus = async (folha, novoStatus, extraData = {}) => {
+export const updateStatus = async (folha, novoStatus, extraData = {}, profile = null) => {
   if (!folha?.id) {
     throw new Error("Folha inválida para atualização de status");
   }
@@ -41,6 +41,8 @@ export const updateStatus = async (folha, novoStatus, extraData = {}) => {
     ? folha.status_historico
     : [];
 
+  const usuario = profile?.full_name || profile?.email || "sistema";
+
   const payload = {
     status: novoStatus,
     status_historico: [
@@ -48,7 +50,7 @@ export const updateStatus = async (folha, novoStatus, extraData = {}) => {
       {
         status: novoStatus,
         data: new Date().toISOString(),
-        usuario: "sistema",
+        usuario: usuario,
         observacoes: extraData.observacoes || "",
       },
     ],
@@ -59,10 +61,11 @@ export const updateStatus = async (folha, novoStatus, extraData = {}) => {
   return payload;
 };
 
-export const processarRetorno = async ({ folha, retornoData }) => {
+export const processarRetorno = async ({ folha, retornoData, profile }) => {
   if (!folha?.id) {
     throw new Error("Folha inválida para processamento de retorno");
   }
+  const usuario = profile?.full_name || profile?.email || "sistema";
 
   const dataRetorno = {
     data_retorno_distribuidora: retornoData.data_retorno,
@@ -75,7 +78,7 @@ export const processarRetorno = async ({ folha, retornoData }) => {
         new Date(retornoData.data_retorno),
         "dd/MM/yyyy",
       )}`,
-    });
+    }, profile);
 
     return { status: "aprovado" };
   }
@@ -94,7 +97,7 @@ export const processarRetorno = async ({ folha, retornoData }) => {
     {
       status: "reprovado",
       data: new Date().toISOString(),
-      usuario: "sistema",
+      usuario: usuario,
       observacoes: `Reprovado em ${format(
         new Date(retornoData.data_retorno),
         "dd/MM/yyyy",
@@ -103,7 +106,7 @@ export const processarRetorno = async ({ folha, retornoData }) => {
     {
       status: "pendente",
       data: new Date().toISOString(),
-      usuario: "sistema",
+      usuario: usuario,
       observacoes: `Folha de correção criada automaticamente após reprovação da ${folha.numero_fm}`,
     },
   ];

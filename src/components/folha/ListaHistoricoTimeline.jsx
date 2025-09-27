@@ -2,7 +2,7 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { STATUS_CONFIG } from "@/config/listafolhaConfig";
-import { History } from "lucide-react";
+import { History, User } from "lucide-react"; // Importar ícone de usuário
 
 const HistoricoTimeline = ({ historico = [], statusConfig = STATUS_CONFIG }) => {
   if (!Array.isArray(historico) || historico.length === 0) {
@@ -29,6 +29,12 @@ const HistoricoTimeline = ({ historico = [], statusConfig = STATUS_CONFIG }) => 
                   </span>
                 )}
               </div>
+              {item.usuario && (
+                <div className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+                  <User className="h-3 w-3" />
+                  <span>{item.usuario}</span>
+                </div>
+              )}
               {item.observacoes && (
                 <p className="mt-1 text-sm text-gray-600">{item.observacoes}</p>
               )}

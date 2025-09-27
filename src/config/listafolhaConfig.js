@@ -1,6 +1,11 @@
-import { Clock, Send, CheckCircle, AlertTriangle, DollarSign, XCircle } from "lucide-react";
+import { Edit, Clock, Send, CheckCircle, AlertTriangle, DollarSign, XCircle } from "lucide-react";
 
 export const STATUS_CONFIG = {
+  rascunho: { 
+    label: "Rascunho", 
+    color: "bg-gray-100 text-gray-800 border-gray-200", 
+    icon: Edit,
+  },
   pendente: {
     label: "Pendente",
     color: "bg-yellow-100 text-yellow-800 border-yellow-200",

@@ -1,16 +1,19 @@
-﻿import React from "react";
+﻿// src/components/folha/ListaFolhaActions.jsx
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { FileDown, Eye, Send, Edit, DollarSign, XCircle } from "lucide-react";
+import { FileDown, Eye, Send, Edit, DollarSign, XCircle, ShieldCheck } from "lucide-react";
 
 const FolhaActions = ({
   folha,
   isExporting,
   onExport,
   onView,
+  onValidar,
   onEnviar,
   onRetorno,
   onPagamento,
   onCancelar,
+  canValidate,
 }) => {
   if (!folha) return null;
 
@@ -34,6 +37,17 @@ const FolhaActions = ({
       >
         <Eye className="w-4 h-4 text-blue-600" />
       </Button>
+
+      {canValidate && folha.status === "rascunho" && (
+        <Button
+          variant="outline"
+          size="icon"
+          title="Validar folha (Supervisor)"
+          onClick={() => onValidar?.(folha)}
+        >
+          <ShieldCheck className="w-4 h-4 text-emerald-700" />
+        </Button>
+      )}
 
       {folha.status === "pendente" && (
         <Button

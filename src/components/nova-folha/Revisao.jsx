@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthProvider";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +8,6 @@ import { Save, AlertTriangle, Building, FileCog, Users, Wrench, Box, DollarSign,
 import { format } from "date-fns";
 import { createPageUrl } from "@/utils";
 import { FolhaMedicao } from "@/entities/FolhaMedicao";
-
 
 const InfoItem = ({ label, value }) => (
   <div>
@@ -30,44 +28,49 @@ const SectionCard = ({ title, icon: Icon, children }) => (
   </Card>
 );
 
-export default function Revisao({ data, onPrevious }) { // Removemos onSave e isSaving dos props
+export default function Revisao({ data, onPrevious }) {
   const { session, profile } = useAuth();
-  const [isSaving, setIsSaving] = useState(false); // Agora o estado Ã© interno
+  const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (finalStatus) => {
     setIsSaving(true);
-
-    const finalData = {
-      ...data,
-      created_by_user_id: session?.user?.id || null,
-      created_by_matricula: profile?.matricula || null,
-      created_by_name: profile?.full_name || null,
-      id: new Date().getTime(), // Gera um ID Ãºnico
-      created_date: new Date().toISOString(), // Data de criaÃ§Ã£o
-      status: finalStatus,
-      status_historico: [
-        ...(data.status_historico || []),
-        {
-          status: finalStatus,
+    try {
+      let payload = { 
+        ...data, 
+        status: finalStatus,
+        created_by_user_id: profile?.id,
+        created_by_matricula: profile?.matricula,
+        created_by_name: profile?.full_name
+      };
+      
+      if (payload?.id) {
+        // Se for uma atualização, apenas chama o update
+        await FolhaMedicao.update(payload.id, payload);
+      } else {
+        // Se for uma criação, adiciona o primeiro registro ao histórico
+        const initialHistory = {
+          status: 'rascunho',
           data: new Date().toISOString(),
-          usuario: 'sistema',
-          observacoes: `Folha criada como ${finalStatus}`
-        }
-      ]
-    };
-
-    // Usa a funÃ§Ã£o do localStorage em vez de uma prop
-    await FolhaMedicao.create(finalData);
-
-   // Simula um tempo de salvamento e redireciona
-    setTimeout(() => {
-      alert('Folha salva com sucesso no armazenamento local!');
+          usuario: profile?.full_name || profile?.email || 'sistema',
+          observacoes: 'Folha de medição criada.'
+        };
+        
+        payload.status_historico = [initialHistory];
+        
+        await FolhaMedicao.create(payload);
+      }
+      
+      alert('Folha salva com sucesso!');
+      navigate(createPageUrl("ListaFolhas"));
+    } catch (e) {
+      console.error("Erro ao salvar a folha:", e);
+      alert("Não foi possível salvar. Verifique os campos obrigatórios e tente novamente.");
+    } finally {
       setIsSaving(false);
-      navigate(createPageUrl('ListaFolhas'));
-    }, 500); // Meio segundo para o usuÃ¡rio ver o feedback
+    }
   };
-  
+
   return (
     <div className="space-y-8">
       <Alert variant="default" className="bg-blue-50 border-blue-200 text-blue-800">
@@ -77,7 +80,7 @@ export default function Revisao({ data, onPrevious }) { // Removemos onSave e is
           Confira todos os dados cuidadosamente antes de salvar. As informações serão salvas no sistema.
         </AlertDescription>
       </Alert>
-
+      
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-8">
           <SectionCard title="Dados Gerais da Obra" icon={Building}>
@@ -90,7 +93,7 @@ export default function Revisao({ data, onPrevious }) { // Removemos onSave e is
               <InfoItem label="Criado por" value={(data.created_by_matricula && data.created_by_name) ? `${data.created_by_matricula} - ${data.created_by_name}` : (profile ? `${profile.matricula || ''} - ${profile.full_name || ''}` : 'N/A')} />
             </div>
           </SectionCard>
-
+          
           <SectionCard title="Dados do Processo" icon={FileCog}>
             <div className="grid grid-cols-2 gap-4">
               <InfoItem label="Tipo de Processo" value={data.tipo_processo} />
@@ -99,80 +102,80 @@ export default function Revisao({ data, onPrevious }) { // Removemos onSave e is
               <InfoItem label="Ordem de Serviço" value={data.ordem_servico} />
             </div>
           </SectionCard>
-
+          
           <SectionCard title="Equipes Envolvidas" icon={Users}>
-             {data.equipes?.length > 0 ? (
-                <div className="space-y-3">
-                    {data.equipes.map((equipe, index) => (
-                        <div key={index} className="p-3 bg-slate-50 rounded text-sm">
-                           <p><strong>Equipe:</strong> {equipe.codigo_equipe}</p>
-                           <p><strong>Encarregado:</strong> {equipe.encarregado}</p>
-                           <p><strong>Motorista:</strong> {equipe.motorista || 'N/A'}</p>
-                           <p><strong>Eletricistas:</strong> {equipe.eletricistas?.join(', ') || 'Nenhum'}</p>
-                        </div>
-                    ))}
-                </div>
+            {data.equipes?.length > 0 ? (
+              <div className="space-y-3">
+                {data.equipes.map((equipe, index) => (
+                  <div key={index} className="p-3 bg-slate-50 rounded text-sm">
+                    <p><strong>Equipe:</strong> {equipe.codigo_equipe}</p>
+                    <p><strong>Encarregado:</strong> {equipe.encarregado}</p>
+                    <p><strong>Motorista:</strong> {equipe.motorista || 'N/A'}</p>
+                    <p><strong>Eletricistas:</strong> {equipe.eletricistas?.join(', ') || 'Nenhum'}</p>
+                  </div>
+                ))}
+              </div>
             ) : <p className="text-sm text-slate-500">Nenhuma equipe adicionada.</p>}
           </SectionCard>
         </div>
-
+        
         <div className="space-y-8">
           <SectionCard title="Serviços Executados" icon={Wrench}>
             {data.servicos?.length > 0 ? (
-                <div className="space-y-2">
-                  {data.servicos.map((servico, index) => (
-                    <div key={index} className="p-2 bg-slate-50 rounded text-sm flex justify-between">
-                      <span>{servico.descricao} (Qtd: {servico.quantidade})</span>
-                      <span className="font-semibold">R$ {servico.valor_total?.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                    </div>
-                  ))}
-                   <div className="pt-2 border-t mt-2 flex justify-between items-center">
-                      <span className="font-bold">TOTAL</span>
-                      <span className="font-bold text-lg text-green-600">R$ {data.valor_total?.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                   </div>
+              <div className="space-y-2">
+                {data.servicos.map((servico, index) => (
+                  <div key={index} className="p-2 bg-slate-50 rounded text-sm flex justify-between">
+                    <span>{servico.descricao} (Qtd: {servico.quantidade})</span>
+                    <span className="font-semibold">R$ {servico.valor_total?.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                  </div>
+                ))}
+                <div className="pt-2 border-t mt-2 flex justify-between items-center">
+                  <span className="font-bold">TOTAL</span>
+                  <span className="font-bold text-lg text-green-600">R$ {data.valor_total?.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </div>
-              ) : <p className="text-sm text-slate-500">Nenhum serviço adicionado.</p>}
+              </div>
+            ) : <p className="text-sm text-slate-500">Nenhum serviço adicionado.</p>}
           </SectionCard>
-
+          
           <SectionCard title="Equipamentos" icon={Wrench}>
             <div className="space-y-4">
-                <div>
-                  <h4 className="font-semibold text-sm mb-2">Instalados ({data.equipamentos_instalados?.length || 0})</h4>
-                  {data.equipamentos_instalados?.length > 0 ? data.equipamentos_instalados.map((item, index) => (
-                      <div key={index} className="p-2 bg-green-50 rounded text-xs">
-                          {item.serial} - {item.fabricante} ({item.capacidade || 'N/A'})
-                      </div>
-                  )) : <p className="text-xs text-slate-500">Nenhum.</p>}
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm mb-2">Retirados ({data.equipamentos_retirados?.length || 0})</h4>
-                   {data.equipamentos_retirados?.length > 0 ? data.equipamentos_retirados.map((item, index) => (
-                      <div key={index} className="p-2 bg-orange-50 rounded text-xs">
-                         {item.serial} - {item.fabricante} ({item.capacidade || 'N/A'})
-                      </div>
-                  )) : <p className="text-xs text-slate-500">Nenhum.</p>}
-                </div>
+              <div>
+                <h4 className="font-semibold text-sm mb-2">Instalados ({data.equipamentos_instalados?.length || 0})</h4>
+                {data.equipamentos_instalados?.length > 0 ? data.equipamentos_instalados.map((item, index) => (
+                  <div key={index} className="p-2 bg-green-50 rounded text-xs">
+                    {item.serial} - {item.fabricante} ({item.capacidade || 'N/A'})
+                  </div>
+                )) : <p className="text-xs text-slate-500">Nenhum.</p>}
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm mb-2">Retirados ({data.equipamentos_retirados?.length || 0})</h4>
+                {data.equipamentos_retirados?.length > 0 ? data.equipamentos_retirados.map((item, index) => (
+                  <div key={index} className="p-2 bg-orange-50 rounded text-xs">
+                    {item.serial} - {item.fabricante} ({item.capacidade || 'N/A'})
+                  </div>
+                )) : <p className="text-xs text-slate-500">Nenhum.</p>}
+              </div>
             </div>
           </SectionCard>
-
+          
           <SectionCard title="Materiais" icon={Box}>
-             <div className="space-y-4">
-                <div>
-                  <h4 className="font-semibold text-sm mb-2">Instalados ({data.materiais_instalados?.length || 0})</h4>
-                  {data.materiais_instalados?.length > 0 ? data.materiais_instalados.map((item, index) => (
-                      <div key={index} className="p-2 bg-green-50 rounded text-xs">
-                          {item.descricao} (Qtd: {item.quantidade})
-                      </div>
-                  )) : <p className="text-xs text-slate-500">Nenhum.</p>}
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm mb-2">Retirados ({data.materiais_retirados?.length || 0})</h4>
-                   {data.materiais_retirados?.length > 0 ? data.materiais_retirados.map((item, index) => (
-                      <div key={index} className="p-2 bg-orange-50 rounded text-xs">
-                         {item.descricao} (Qtd: {item.quantidade})
-                      </div>
-                  )) : <p className="text-xs text-slate-500">Nenhum.</p>}
-                </div>
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold text-sm mb-2">Instalados ({data.materiais_instalados?.length || 0})</h4>
+                {data.materiais_instalados?.length > 0 ? data.materiais_instalados.map((item, index) => (
+                  <div key={index} className="p-2 bg-green-50 rounded text-xs">
+                    {item.descricao} (Qtd: {item.quantidade})
+                  </div>
+                )) : <p className="text-xs text-slate-500">Nenhum.</p>}
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm mb-2">Retirados ({data.materiais_retirados?.length || 0})</h4>
+                {data.materiais_retirados?.length > 0 ? data.materiais_retirados.map((item, index) => (
+                  <div key={index} className="p-2 bg-orange-50 rounded text-xs">
+                    {item.descricao} (Qtd: {item.quantidade})
+                  </div>
+                )) : <p className="text-xs text-slate-500">Nenhum.</p>}
+              </div>
             </div>
           </SectionCard>
         </div>
@@ -190,7 +193,7 @@ export default function Revisao({ data, onPrevious }) { // Removemos onSave e is
         </Button>
         
         <Button
-          onClick={() => handleSubmit('pendente')}
+          onClick={() => handleSubmit('rascunho')}
           disabled={isSaving}
           className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold px-8 py-2 flex items-center gap-2"
         >

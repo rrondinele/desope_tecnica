@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect, useCallback, useMemo } from "react";
+// src/Pages/ListaFolhas.jsx
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase, hasSupabase } from "@/services/supabaseClient";
 import { FolhaMedicao } from "@/entities/FolhaMedicao";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Files, Mail, Share, AlertOctagon, AlertTriangle, Clock } from "lucide-react";
+import { Files, Mail, Share, AlertOctagon, AlertTriangle, Clock, ShieldCheck } from "lucide-react";
 import { format, differenceInBusinessDays } from "date-fns";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +27,7 @@ import {
 import { updateStatus, processarRetorno, getPrazoStatus, validarEnvioFolha } from "@/rules/listafolhaRules";
 import { ListaFolhaActions, ListaPagination, ListaStatusBadge, ListaHistoricoTimeline } from "@/components/folha";
 import { addBusinessDays, parseLocalDate, formatCurrency, escapeCsvValue } from "@/utils/listafolhaUtils";
+import { useAuth } from "@/context/AuthProvider";
 import "@/styles/ListaFolhas.css";
 
 const getPrazoInfo = (folha) => {
@@ -55,8 +57,10 @@ const getPrazoInfo = (folha) => {
     text: diasRestantes === 1 ? "Falta 1 dia" : `Faltam ${diasRestantes} dias`,
   };
 };
+
 const ListaFolhas = () => {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [folhas, setFolhas] = useState([]);
   const [filteredFolhas, setFilteredFolhas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -74,6 +78,7 @@ const ListaFolhas = () => {
   const [showRetornoModal, setShowRetornoModal] = useState(false);
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
   const [showCancelamentoModal, setShowCancelamentoModal] = useState(false);
+  const [showValidacaoModal, setShowValidacaoModal] = useState(false);
 
   const [envioData, setEnvioData] = useState({ data_envio: format(new Date(), "yyyy-MM-dd"), metodo_envio: "" });
   const [retornoData, setRetornoData] = useState({
@@ -84,6 +89,8 @@ const ListaFolhas = () => {
   });
   const [pagamentoData, setPagamentoData] = useState({ numero_pagamento: "", data_pagamento: "" });
   const [cancelamentoData, setCancelamentoData] = useState({ motivo_cancelamento: "" });
+
+  const canValidate = useMemo(() => profile?.role === 'supervisor', [profile]);
 
   const loadFolhas = useCallback(async () => {
     setIsLoading(true);
@@ -101,7 +108,7 @@ const ListaFolhas = () => {
 
           const map = {};
           (profs || []).forEach((profile) => {
-            map[profile.id] = profile.display_name || profile.full_name || "";
+            map[profile.id] = profile.display_name || profile.full_name || profile.matricula || "";
           });
           setProfilesMap(map);
         } else {
@@ -180,6 +187,22 @@ const ListaFolhas = () => {
   const selectedObraDate = useMemo(() => {
     return selectedFolha?.data_obra ? parseLocalDate(selectedFolha.data_obra) : null;
   }, [selectedFolha]);
+
+  const handleValidarFolha = async () => {
+    if (!selectedFolha || !canValidate) return;
+    try {
+      await updateStatus(selectedFolha, "pendente", {
+        observacoes: "Folha validada pelo supervisor"
+      }, profile);
+      setShowValidacaoModal(false);
+      setSelectedFolha(null);
+      await loadFolhas();
+    } catch (error) {
+      console.error("Erro ao validar folha:", error);
+      alert("Não foi possível validar a folha. Tente novamente.");
+    }
+  };
+  
   const handleEnviarFolha = async () => {
     const validation = validarEnvioFolha(envioData);
     if (!validation.ok) {
@@ -195,7 +218,7 @@ const ListaFolhas = () => {
           new Date(envioData.data_envio),
           "dd/MM/yyyy",
         )}`,
-      });
+      }, profile);
 
       setShowEnvioModal(false);
       setSelectedFolha(null);
@@ -209,7 +232,7 @@ const ListaFolhas = () => {
 
   const handleProcessarRetorno = async () => {
     try {
-      const resultado = await processarRetorno({ folha: selectedFolha, retornoData });
+      const resultado = await processarRetorno({ folha: selectedFolha, retornoData, profile });
 
       setShowRetornoModal(false);
       setSelectedFolha(null);
@@ -237,7 +260,7 @@ const ListaFolhas = () => {
         numero_pagamento: pagamentoData.numero_pagamento,
         data_pagamento: pagamentoData.data_pagamento,
         observacoes: `Pagamento registrado - NF: ${pagamentoData.numero_pagamento}`,
-      });
+      }, profile);
 
       setShowPagamentoModal(false);
       setSelectedFolha(null);
@@ -258,7 +281,7 @@ const ListaFolhas = () => {
       await updateStatus(selectedFolha, "cancelado", {
         motivo_cancelamento: cancelamentoData.motivo_cancelamento,
         observacoes: `Folha cancelada. Motivo: ${cancelamentoData.motivo_cancelamento}`,
-      });
+      }, profile);
 
       setShowCancelamentoModal(false);
       setSelectedFolha(null);
@@ -505,11 +528,16 @@ const ListaFolhas = () => {
                         <TableCell>
                           <ListaFolhaActions
                             folha={folha}
+                            canValidate={canValidate}
                             isExporting={exportingFolhaId === folha.id}
                             onExport={handleExportToTemplate}
                             onView={(item) => {
                               setSelectedFolha(item);
                               setShowDetailsModal(true);
+                            }}
+                            onValidar={(item) => {
+                              setSelectedFolha(item);
+                              setShowValidacaoModal(true);
                             }}
                             onEnviar={(item) => {
                               setSelectedFolha(item);
@@ -876,6 +904,28 @@ const ListaFolhas = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        <Dialog open={showValidacaoModal} onOpenChange={setShowValidacaoModal}>
+            <DialogContent className="max-w-md sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <ShieldCheck className="w-5 h-5 text-emerald-700" />
+                        Confirmar Validação
+                    </DialogTitle>
+                    <DialogDescription>
+                        Você tem certeza que deseja validar a folha <strong>{selectedFolha?.numero_fm}</strong>?
+                        A folha ficará disponível para o setor administrativo prosseguir com o envio.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowValidacaoModal(false)}>Cancelar</Button>
+                    <Button onClick={handleValidarFolha} className="bg-emerald-600 hover:bg-emerald-700">
+                        Sim, Validar Folha
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
       </div>
     </div>
   );
