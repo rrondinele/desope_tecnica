@@ -1,5 +1,5 @@
-import React from "react";
-import { Routes, Route } from "react-router-dom"; // Removido Navigate daqui
+import React, { useEffect } from "react"; // 1. Adicionado useEffect
+import { Routes, Route, useNavigate } from "react-router-dom"; // 2. Adicionado useNavigate
 import Layout from "./Layout";
 import Login from "@/Pages/Login";
 import Dashboard from "@/Pages/Dashboard";
@@ -9,7 +9,9 @@ import ListaFolhas from "@/Pages/ListaFolhas";
 import DashboardFinanceiro from "./Pages/DashboardFinanceiro";
 import Settings from "./Pages/Settings";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
-import RoleBasedRedirect from "./components/auth/RoleBasedRedirect"; // 1. IMPORTE O NOVO COMPONENTE
+import RoleBasedRedirect from "./components/auth/RoleBasedRedirect";
+import { supabase } from "./services/supabaseClient";
+import UpdatePassword from "@/Pages/UpdatePassword";
 
 const AdminPage = () => (
   <div className="p-8">
@@ -19,13 +21,34 @@ const AdminPage = () => (
 );
 
 export default function App() {
+  // 5. Adicionado o listener para capturar o evento de recuperação de senha
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Ouve os eventos de autenticação do Supabase
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        // Se o evento for de recuperação de senha, redireciona para a página correta
+        navigate('/update-password');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
+
+
   return (
     <Routes>
+      {/* --- ROTAS PÚBLICAS --- */}
       <Route path="/login" element={<Login />} />
+      {/* 6. Adicionada a rota pública para a página de atualização de senha */}
+      <Route path="/update-password" element={<UpdatePassword />} />
 
+      {/* --- ROTAS PROTEGIDAS --- */}
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<RoleBasedRedirect />} />
-        {/* O resto das rotas permanece o mesmo */}
         <Route path="dashboard" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><Dashboard /></ProtectedRoute>} />
         <Route path="cadastro" element={<ProtectedRoute allowedRoles={['admin']}><Cadastro /></ProtectedRoute>} />
         <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

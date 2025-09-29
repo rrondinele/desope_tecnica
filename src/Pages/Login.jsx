@@ -66,7 +66,8 @@ export default function Login() {
     try {
       // CORREÇÃO AQUI:
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/`,
+        //redirectTo: `${window.location.origin}/`,
+        redirectTo: `${window.location.origin}/update-password`,
       });
       if (error) throw error;
       setMessage("Se uma conta existir para este e-mail, um link de redefinição foi enviado.");
