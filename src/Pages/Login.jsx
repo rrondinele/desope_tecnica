@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,9 +19,71 @@ export default function Login() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const hasHandledRecoveryRedirect = useRef(false);
 
   const fromLocation = location.state?.from?.pathname;
   const redirectTo = fromLocation && fromLocation !== "/login" ? fromLocation : "/";
+
+  useEffect(() => {
+    if (hasHandledRecoveryRedirect.current) return;
+
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const queryParams = new URLSearchParams(window.location.search);
+    const tokenHash = queryParams.get("token_hash") || queryParams.get("token");
+    const recoveryType = hashParams.get("type") || queryParams.get("type");
+    const hasAccessToken = hashParams.has("access_token");
+
+    const cleanUrlState = (fieldsToRemove = []) => {
+      const remainingQuery = new URLSearchParams(window.location.search);
+      fieldsToRemove.forEach((field) => remainingQuery.delete(field));
+      const queryString = remainingQuery.toString();
+      const cleanUrl = `${window.location.origin}${window.location.pathname}${queryString ? `?${queryString}` : ""}`;
+      window.history.replaceState({}, document.title, cleanUrl);
+    };
+
+    if (tokenHash) {
+      hasHandledRecoveryRedirect.current = true;
+
+      const handleTokenRecovery = async () => {
+        setError("");
+        setMessage("");
+
+        try {
+          const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+          if (error) throw error;
+
+          cleanUrlState(["token", "token_hash", "type"]);
+          navigate("/reset-password", { replace: true });
+        } catch (err) {
+          setError(err.message || "Não foi possível validar o link de redefinição. Solicite um novo e-mail.");
+        }
+      };
+
+      handleTokenRecovery();
+      return;
+    }
+
+    if (recoveryType !== "recovery" || !hasAccessToken) return;
+
+    hasHandledRecoveryRedirect.current = true;
+
+    const handleRecoveryRedirect = async () => {
+      setError("");
+      setMessage("");
+
+      try {
+        const { error } = await supabase.auth.getSessionFromUrl({ storeSession: true });
+        if (error) throw error;
+
+        cleanUrlState();
+        navigate("/reset-password", { replace: true });
+      } catch (err) {
+        setError(err.message || "Não foi possível validar o link de redefinição. Solicite um novo e-mail.");
+      }
+    };
+
+    handleRecoveryRedirect();
+  }, [navigate]);
 
   const resetFormState = () => {
     setEmail("");
@@ -67,7 +129,7 @@ export default function Login() {
       // CORREÇÃO AQUI:
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         //redirectTo: `${window.location.origin}/`,
-        redirectTo: `${window.location.origin}/update-password`,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
       setMessage("Se uma conta existir para este e-mail, um link de redefinição foi enviado.");

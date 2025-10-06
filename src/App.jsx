@@ -11,7 +11,7 @@ import Settings from "./Pages/Settings";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import RoleBasedRedirect from "./components/auth/RoleBasedRedirect";
 import { supabase } from "./services/supabaseClient";
-import UpdatePassword from "@/Pages/UpdatePassword";
+import ResetPassword from "@/Pages/ResetPassword";
 
 const AdminPage = () => (
   <div className="p-8">
@@ -29,7 +29,7 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         // Se o evento for de recuperação de senha, redireciona para a página correta
-        navigate('/update-password');
+        navigate('/reset-password');
       }
     });
 
@@ -44,7 +44,7 @@ export default function App() {
       {/* --- ROTAS PÚBLICAS --- */}
       <Route path="/login" element={<Login />} />
       {/* 6. Adicionada a rota pública para a página de atualização de senha */}
-      <Route path="/update-password" element={<UpdatePassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* --- ROTAS PROTEGIDAS --- */}
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
