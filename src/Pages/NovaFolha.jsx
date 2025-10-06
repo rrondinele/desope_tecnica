@@ -111,15 +111,56 @@ export default function NovaFolha() {
     }
   }, [gerarNumeroFM]);
 
+  const loadFolhaParaEdicao = useCallback(async (id, stepNumber) => {
+    try {
+      const folhaExistente = await FolhaMedicao.get(id);
+
+      if (!folhaExistente) {
+        alert("Folha não encontrada para edição.");
+        navigate(createPageUrl("ListaFolhas"));
+        return;
+      }
+
+      const normalizada = {
+        ...folhaExistente,
+        servicos: folhaExistente.servicos || [],
+        equipes: folhaExistente.equipes || [],
+        equipamentos_instalados: folhaExistente.equipamentos_instalados || [],
+        equipamentos_retirados: folhaExistente.equipamentos_retirados || [],
+        materiais_instalados: folhaExistente.materiais_instalados || [],
+        materiais_retirados: folhaExistente.materiais_retirados || [],
+        status_historico: folhaExistente.status_historico || [],
+      };
+
+      setFormData((prev) => ({
+        ...prev,
+        ...normalizada,
+      }));
+      setCurrentStep(stepNumber);
+    } catch (error) {
+      console.error("Erro ao carregar folha para edição:", error);
+      alert("Não foi possível carregar a folha para edição.");
+      navigate(createPageUrl("ListaFolhas"));
+    }
+  }, [navigate]);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    const editId = params.get('editId');
     const cloneId = params.get('cloneFrom');
-    if (cloneId) {
+    const stepParam = params.get('step');
+    const parsedStep = Number(stepParam);
+    const totalSteps = steps.length;
+    const defaultStep = parsedStep >= 1 && parsedStep <= totalSteps ? parsedStep : 1;
+
+    if (editId) {
+      loadFolhaParaEdicao(editId, defaultStep);
+    } else if (cloneId) {
       loadFolhaParaClonar(cloneId);
     } else {
       gerarNumeroFM();
     }
-  }, [location.search, loadFolhaParaClonar, gerarNumeroFM]);
+  }, [location.search, loadFolhaParaClonar, loadFolhaParaEdicao, gerarNumeroFM, steps.length]);
   
   useEffect(() => {
     const prefix = formData.tipo_processo === 'Manutenção' ? 'OMI-' : 'OII-';

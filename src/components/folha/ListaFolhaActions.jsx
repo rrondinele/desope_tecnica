@@ -1,7 +1,7 @@
 ﻿// src/components/folha/ListaFolhaActions.jsx
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { FileDown, Eye, Send, Edit, DollarSign, XCircle, ShieldCheck } from "lucide-react";
+import { FileDown, Eye, Send, Edit, DollarSign, XCircle, ShieldCheck, Pencil } from "lucide-react";
 
 const FolhaActions = ({
   folha,
@@ -9,6 +9,7 @@ const FolhaActions = ({
   onExport,
   onView,
   onValidar,
+  onEdit,
   onEnviar,
   onRetorno,
   onPagamento,
@@ -46,6 +47,17 @@ const FolhaActions = ({
           onClick={() => onValidar?.(folha)}
         >
           <ShieldCheck className="w-4 h-4 text-emerald-700" />
+        </Button>
+      )}
+
+      {!canValidate && folha.status === "aguardando_correcao" && (
+        <Button
+          variant="outline"
+          size="icon"
+          title="Editar folha para correção"
+          onClick={() => onEdit?.(folha)}
+        >
+          <Pencil className="w-4 h-4 text-amber-600" />
         </Button>
       )}
 

@@ -11,6 +11,11 @@ export const STATUS_CONFIG = {
     color: "bg-yellow-100 text-yellow-800 border-yellow-200",
     icon: Clock,
   },
+  aguardando_correcao: {
+    label: "Aguardando Correção",
+    color: "bg-amber-100 text-amber-800 border-amber-200",
+    icon: Edit,
+  },
   aguardando_aprovacao: {
     label: "Aguardando Aprovação",
     color: "bg-blue-100 text-blue-800 border-blue-200",

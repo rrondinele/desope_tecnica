@@ -45,7 +45,7 @@ const getPrazoInfo = (folha) => {
   const diasRestantes = differenceInBusinessDays(dueDate, hoje);
 
   if (diasRestantes < 0) {
-    return { className: "bg-red-100", icon: AlertOctagon, text: "Atrasado" };
+    return { className: "bg-red-500", icon: AlertOctagon, text: "Atrasado" };
   }
   if (diasRestantes === 0) {
     return { className: "bg-orange-100", icon: AlertTriangle, text: "Vence Hoje" };
@@ -56,6 +56,50 @@ const getPrazoInfo = (folha) => {
     icon: Clock,
     text: diasRestantes === 1 ? "Falta 1 dia" : `Faltam ${diasRestantes} dias`,
   };
+};
+
+const NAO_VALIDACAO_MOTIVOS = [
+  "Erro Atividade",
+  "Erro Equipamento",
+  "Erro Material",
+  "Erro Equipe",
+  "Erro Dados Cadastral",
+];
+
+const MOTIVO_PARA_STEP = {
+  "Erro Dados Cadastral": 1,
+  "Erro Equipe": 2,
+  "Erro Atividade": 3,
+  "Erro Equipamento": 4,
+  "Erro Material": 5,
+};
+
+const extrairMotivoNaoValidacao = (folha) => {
+  if (!folha) return null;
+  const historico = Array.isArray(folha.status_historico) ? [...folha.status_historico].reverse() : [];
+  const registro =
+    historico.find((item) => item.status === "aguardando_correcao" && item.observacoes) ||
+    historico.find((item) => item.status === "rascunho" && item.observacoes && item.observacoes.includes("não validada"));
+
+  const texto = registro?.observacoes || folha.observacoes || "";
+  if (!texto) return null;
+
+  const matchMotivo = texto.match(/Motivo:\s*([^|]+)/i);
+  if (matchMotivo) {
+    return matchMotivo[1].trim();
+  }
+
+  const matchParentese = texto.match(/\(([^)]+)\)/);
+  if (matchParentese) {
+    return matchParentese[1].trim();
+  }
+
+  return null;
+};
+
+const obterStepParaMotivo = (motivo) => {
+  if (!motivo) return 1;
+  return MOTIVO_PARA_STEP[motivo] || 1;
 };
 
 const ListaFolhas = () => {
@@ -79,6 +123,7 @@ const ListaFolhas = () => {
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
   const [showCancelamentoModal, setShowCancelamentoModal] = useState(false);
   const [showValidacaoModal, setShowValidacaoModal] = useState(false);
+  const [showNaoValidacaoModal, setShowNaoValidacaoModal] = useState(false);
 
   const [envioData, setEnvioData] = useState({ data_envio: format(new Date(), "yyyy-MM-dd"), metodo_envio: "" });
   const [retornoData, setRetornoData] = useState({
@@ -89,6 +134,7 @@ const ListaFolhas = () => {
   });
   const [pagamentoData, setPagamentoData] = useState({ numero_pagamento: "", data_pagamento: "" });
   const [cancelamentoData, setCancelamentoData] = useState({ motivo_cancelamento: "" });
+  const [naoValidacaoData, setNaoValidacaoData] = useState({ motivo: "", observacoes: "" });
 
   const canValidate = useMemo(() => profile?.role === 'supervisor', [profile]);
 
@@ -195,6 +241,7 @@ const ListaFolhas = () => {
         observacoes: "Folha validada pelo supervisor"
       }, profile);
       setShowValidacaoModal(false);
+      setNaoValidacaoData({ motivo: "", observacoes: "" });
       setSelectedFolha(null);
       await loadFolhas();
     } catch (error) {
@@ -202,7 +249,51 @@ const ListaFolhas = () => {
       alert("Não foi possível validar a folha. Tente novamente.");
     }
   };
-  
+
+  const handleAbrirNaoValidacaoModal = () => {
+    setShowValidacaoModal(false);
+    setNaoValidacaoData({ motivo: "", observacoes: "" });
+    setShowNaoValidacaoModal(true);
+  };
+
+  const handleNaoValidarFolha = async () => {
+    if (!selectedFolha || !canValidate) return;
+    if (!naoValidacaoData.motivo) {
+      alert("Selecione o motivo de não validação.");
+      return;
+    }
+
+    const observacao = (naoValidacaoData.observacoes || "").trim();
+    const baseObservacao = `Folha não validada - Motivo: ${naoValidacaoData.motivo}`;
+    const observacaoCompleta = observacao ? `${baseObservacao} | Obs: ${observacao}` : baseObservacao;
+
+    try {
+      await updateStatus(
+        selectedFolha,
+        "aguardando_correcao",
+        {
+          observacoes: observacaoCompleta,
+        },
+        profile
+      );
+      setShowNaoValidacaoModal(false);
+      setNaoValidacaoData({ motivo: "", observacoes: "" });
+      setSelectedFolha(null);
+      await loadFolhas();
+    } catch (error) {
+      console.error("Erro ao registrar não validação da folha:", error);
+      alert("Não foi possível registrar a não validação. Tente novamente.");
+    }
+  };
+
+  const handleEditarFolha = (folha) => {
+    if (!folha?.id) return;
+    const motivo = extrairMotivoNaoValidacao(folha);
+    const step = obterStepParaMotivo(motivo);
+    const motivoParam = motivo ? `&motivo=${encodeURIComponent(motivo)}` : "";
+    navigate(createPageUrl(`NovaFolha?editId=${folha.id}&step=${step}${motivoParam}`));
+  };
+
   const handleEnviarFolha = async () => {
     const validation = validarEnvioFolha(envioData);
     if (!validation.ok) {
@@ -478,9 +569,16 @@ const ListaFolhas = () => {
                   paginatedFolhas.map((folha) => {
                     const prazoInfo = getPrazoInfo(folha);
                     const PrazoIcon = prazoInfo.icon;
+                    const isAguardandoCorrecao = folha.status === "aguardando_correcao";
+                    const rowClassName = [
+                      prazoInfo.className,
+                      isAguardandoCorrecao ? "bg-red-100 hover:bg-red-100" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
 
                     return (
-                      <TableRow key={folha.id} className={prazoInfo.className}>
+                      <TableRow key={folha.id} className={rowClassName}>
                         <TableCell className="font-mono font-semibold">{folha.numero_fm}</TableCell>
                         <TableCell>{folha.projeto}</TableCell>
                         <TableCell>{folha.tipo_processo}</TableCell>
@@ -559,6 +657,7 @@ const ListaFolhas = () => {
                               setPagamentoData({ numero_pagamento: "", data_pagamento: "" });
                               setShowPagamentoModal(true);
                             }}
+                            onEdit={handleEditarFolha}
                             onCancelar={(item) => {
                               setSelectedFolha(item);
                               setCancelamentoData({ motivo_cancelamento: "" });
@@ -917,13 +1016,87 @@ const ListaFolhas = () => {
                         A folha ficará disponível para o setor administrativo prosseguir com o envio.
                     </DialogDescription>
                 </DialogHeader>
-                <DialogFooter>
+                <DialogFooter className="gap-2">
                     <Button variant="outline" onClick={() => setShowValidacaoModal(false)}>Cancelar</Button>
+                    <Button
+                        variant="outline"
+                        onClick={handleAbrirNaoValidacaoModal}
+                        className="border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                        Não validar
+                    </Button>
                     <Button onClick={handleValidarFolha} className="bg-emerald-600 hover:bg-emerald-700">
                         Sim, Validar Folha
                     </Button>
                 </DialogFooter>
             </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={showNaoValidacaoModal}
+          onOpenChange={(open) => {
+            setShowNaoValidacaoModal(open);
+            if (!open) {
+              setNaoValidacaoData({ motivo: "", observacoes: "" });
+            }
+          }}
+        >
+          <DialogContent className="max-w-md sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <AlertOctagon className="w-5 h-5" />
+                Registrar não validação
+              </DialogTitle>
+              <DialogDescription>
+                Informe o motivo para não validar a folha <strong>{selectedFolha?.numero_fm}</strong> e adicione uma observação, se necessário.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-semibold">Motivo *</label>
+                <Select
+                  value={naoValidacaoData.motivo}
+                  onValueChange={(value) => setNaoValidacaoData((prev) => ({ ...prev, motivo: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o motivo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NAO_VALIDACAO_MOTIVOS.map((motivo) => (
+                      <SelectItem key={motivo} value={motivo}>
+                        {motivo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-semibold">Obs</label>
+                <Textarea
+                  placeholder="Compartilhe detalhes adicionais"
+                  value={naoValidacaoData.observacoes}
+                  onChange={(event) =>
+                    setNaoValidacaoData((prev) => ({ ...prev, observacoes: event.target.value }))
+                  }
+                  rows={4}
+                />
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowNaoValidacaoModal(false);
+                  setShowValidacaoModal(true);
+                }}
+              >
+                Voltar
+              </Button>
+              <Button onClick={handleNaoValidarFolha} className="bg-red-600 hover:bg-red-700">
+                Confirmar Não Validação
+              </Button>
+            </DialogFooter>
+          </DialogContent>
         </Dialog>
 
       </div>
