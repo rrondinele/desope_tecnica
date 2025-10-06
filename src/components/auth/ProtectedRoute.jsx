@@ -14,7 +14,13 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   // 2. Se não houver sessão após o carregamento, redireciona para o login.
   if (!session) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    const target = {
+      pathname: '/login',
+      search: location.search,
+      hash: location.hash,
+    };
+
+    return <Navigate to={target} state={{ from: location }} replace />;
   }
 
   // 3. Se a rota exige roles e o usuário não tem a role permitida, redireciona.
