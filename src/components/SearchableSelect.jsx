@@ -73,22 +73,23 @@ export default function SearchableSelect({
         }
       }
 
-      // 🚫 excluir valores já usados
-      if (exclude?.column && Array.isArray(exclude.values) && exclude.values.length > 0) {
-        // supabase-js exige string '(v1,v2,...)' para o operador IN quando usado via .not
-        const list = '(' + exclude.values
-          .map(v => `'${String(v).replace(/'/g, "''")}'`)
-          .join(',') + ')'
-        q = q.not(exclude.column, 'in', list)
-      }
-
       const { data, error } = await q
       if (error) {
         console.error('SearchableSelect error:', error)
-        if (!ignore) setItems([])
         return
       }
-      if (!ignore) setItems(data || [])
+      let result = data || []
+
+      if (exclude?.column && Array.isArray(exclude.values) && exclude.values.length > 0) {
+        const excludeSet = new Set(exclude.values.map(v => String(v).trim()).filter(Boolean))
+        result = result.filter(row => {
+          const colValue = row?.[exclude.column]
+          if (colValue === undefined || colValue === null) return true
+          return !excludeSet.has(String(colValue).trim())
+        })
+      }
+
+      if (!ignore) setItems(result)
     }
 
     run()
@@ -100,8 +101,7 @@ export default function SearchableSelect({
     cols,
     maxRows,
     query,
-    JSON.stringify(where || []),
-    JSON.stringify(exclude || {})
+    JSON.stringify(where || [])
   ])
 
   useEffect(() => {

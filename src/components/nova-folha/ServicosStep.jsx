@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from "react";
+﻿import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +33,15 @@ export default function ServicosStep({ data, updateData }) {
   }, [novoServico.descricao]);
 
   const [valorTotalGeral, setValorTotalGeral] = useState(0);
+
+  const servicosSelecionados = useMemo(() => {
+    const codigos = new Set();
+    (data.servicos || []).forEach((servico) => {
+      if (servico?.codigo_mestre) codigos.add(String(servico.codigo_mestre).trim());
+      else if (servico?.codigo) codigos.add(String(servico.codigo).trim());
+    });
+    return Array.from(codigos);
+  }, [data.servicos]);
 
   // Calcula o valor total sem causar loop
   const calcularValorTotal = useCallback(() => {
@@ -78,13 +87,20 @@ export default function ServicosStep({ data, updateData }) {
 
   const adicionarServico = () => {
     if (novoServico.descricao && novoServico.quantidade > 0) {
+      const codigoAtual = String(novoServico.codigo_mestre || novoServico.codigo || '').trim();
+      const servicosExistentes = data.servicos || [];
+      if (codigoAtual && servicosExistentes.some((s) => String(s.codigo_mestre || s.codigo || '').trim() === codigoAtual)) {
+        alert('Este serviço já foi adicionado. Remova o item existente antes de incluí-lo novamente.');
+        return;
+      }
+
       const servicoParaAdicionar = {
         ...novoServico,
         id: Date.now(), // ID único para a lista na UI
         valor_total: novoServico.valor_unitario * novoServico.quantidade
       };
 
-      const servicos = [...(data.servicos || []), servicoParaAdicionar];
+      const servicos = [...servicosExistentes, servicoParaAdicionar];
       updateData({ servicos });
 
       // Reseta o formulário mantendo a quantidade (para UX)
@@ -125,6 +141,7 @@ export default function ServicosStep({ data, updateData }) {
                 onValueChange={handleServicoSelectDb}
                 getLabel={(row) => row ? `${row.codigo_mestre} - ${row.descricao_item}` : ''}
                 getValue={(row) => row ? `${row.codigo_mestre} - ${row.descricao_item}` : ''}
+                exclude={{ column: 'codigo_mestre', values: servicosSelecionados }}
                 className="w-full"
               />
             </div>            
