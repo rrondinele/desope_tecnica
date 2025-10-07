@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '@/services/supabaseClient'
 
 export default function SearchableSelect({
@@ -78,18 +78,8 @@ export default function SearchableSelect({
         console.error('SearchableSelect error:', error)
         return
       }
-      let result = data || []
 
-      if (exclude?.column && Array.isArray(exclude.values) && exclude.values.length > 0) {
-        const excludeSet = new Set(exclude.values.map(v => String(v).trim()).filter(Boolean))
-        result = result.filter(row => {
-          const colValue = row?.[exclude.column]
-          if (colValue === undefined || colValue === null) return true
-          return !excludeSet.has(String(colValue).trim())
-        })
-      }
-
-      if (!ignore) setItems(result)
+      if (!ignore) setItems(data || [])
     }
 
     run()
@@ -103,6 +93,26 @@ export default function SearchableSelect({
     query,
     JSON.stringify(where || [])
   ])
+
+  const filteredItems = useMemo(() => {
+    if (!Array.isArray(items)) return []
+
+    if (exclude?.column && Array.isArray(exclude.values) && exclude.values.length > 0) {
+      const excludeSet = new Set(
+        exclude.values
+          .map(v => (v === null || v === undefined ? '' : String(v).trim()))
+          .filter(Boolean)
+      )
+
+      return items.filter(row => {
+        const colValue = row?.[exclude.column]
+        if (colValue === undefined || colValue === null) return true
+        return !excludeSet.has(String(colValue).trim())
+      })
+    }
+
+    return items
+  }, [items, exclude])
 
   useEffect(() => {
     function onDocClick(e) {
@@ -147,7 +157,7 @@ export default function SearchableSelect({
       />
       {open && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-white shadow-lg">
-          {items?.length > 0 ? items.map((row, idx) => (
+          {filteredItems?.length > 0 ? filteredItems.map((row, idx) => (
             <button
               key={idx}
               type="button"

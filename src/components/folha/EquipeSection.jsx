@@ -27,6 +27,7 @@ function deptoFromCodigo(cod) {
 export default function EquipeSection({ equipes, onChange }) {
   const [novaEquipe, setNovaEquipe] = useState({
     codigo_equipe: '',
+    supervisor: '',
     encarregado: '',
     motorista: '',
     eletricistas: []
@@ -60,16 +61,17 @@ export default function EquipeSection({ equipes, onChange }) {
   };
 
   const adicionarEquipe = () => {
-    if (novaEquipe.codigo_equipe && novaEquipe.encarregado && novaEquipe.eletricistas.length > 0) {
+    if (novaEquipe.codigo_equipe && novaEquipe.supervisor && novaEquipe.encarregado && novaEquipe.eletricistas.length > 0) {
       onChange([...(equipes || []), { ...novaEquipe, id: Date.now() }]);
       setNovaEquipe({
         codigo_equipe: '',
+        supervisor: '',
         encarregado: '',
         motorista: '',
         eletricistas: []
       });
     } else {
-      alert("Código da equipe, encarregado e ao menos um eletricista são obrigatórios.");
+      alert("Código da equipe, supervisor, encarregado e ao menos um eletricista são obrigatórios.");
     }
   };
 
@@ -83,13 +85,23 @@ export default function EquipeSection({ equipes, onChange }) {
   // Filtros derivados do código da equipe
   const departamento = deptoFromCodigo(novaEquipe.codigo_equipe);
   const whereDepto = departamento ? [{ column: 'descricao_departamento', operator: 'ilike', value: `%${departamento}%` }] : [];
+  const prefix = novaEquipe.codigo_equipe ? novaEquipe.codigo_equipe.slice(0, 2).toUpperCase() : '';
+  let supervisorFuncFilter = [];
+  if (prefix === 'EX' || prefix === 'MT') {
+    supervisorFuncFilter = [{ column: 'funcao', operator: 'ilike', value: '%SUPERVISOR OPERACAO ELETRIC%' }];
+  } else if (prefix === 'LV') {
+    supervisorFuncFilter = [{ column: 'funcao', operator: 'ilike', value: '%S/SUPERVISOR(A) LINHA VIVA%' }];
+  }
+  const supervisorWhere = [...supervisorFuncFilter, ...whereDepto];
   // Excluir colaboradores já escolhidos nesta folha
   const usados = new Set();
   (equipes || []).forEach(eq => {
+    if (eq.supervisor) usados.add(String(eq.supervisor.split(' - ')[0]));
     if (eq.encarregado) usados.add(String(eq.encarregado.split(' - ')[0]));
     if (eq.motorista) usados.add(String(eq.motorista.split(' - ')[0]));
     (eq.eletricistas || []).forEach(e => usados.add(String(e.split(' - ')[0])));
   });
+  if (novaEquipe.supervisor) usados.add(String(novaEquipe.supervisor.split(' - ')[0]));
   if (novaEquipe.encarregado) usados.add(String(novaEquipe.encarregado.split(' - ')[0]));
   if (novaEquipe.motorista) usados.add(String(novaEquipe.motorista.split(' - ')[0]));
   (novaEquipe.eletricistas || []).forEach(e => usados.add(String(e.split(' - ')[0])));
@@ -127,7 +139,28 @@ export default function EquipeSection({ equipes, onChange }) {
               </Select>
             </div>
 
-            <div className="space-y-2 md:col-span-5">
+            <div className="space-y-2 md:col-span-3">
+              <Label htmlFor="supervisor" className="text-sm font-semibold text-slate-700">
+                Supervisor *
+              </Label>
+              <SearchableSelect
+                id="supervisor"
+                tableName="cen_colaboradores"
+                columnName="nome"
+                selectColumns="matricula_ceneged, nome, funcao, descricao_departamento"
+                where={supervisorWhere}
+                exclude={excludeProp}
+                placeholder="Pesquisar supervisor..."
+                value={novaEquipe.supervisor}
+                onValueChange={(val) => setNovaEquipe(prev => ({ ...prev, supervisor: val }))}
+                getLabel={getColaboradorLabel}
+                getValue={getColaboradorValue}
+                disabled={!isCodigoSelecionado}
+                className={!isCodigoSelecionado ? "opacity-50 cursor-not-allowed" : ""}
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-3">
               <Label htmlFor="encarregado" className="text-sm font-semibold text-slate-700">
                 Encarregado *
               </Label>
@@ -148,7 +181,7 @@ export default function EquipeSection({ equipes, onChange }) {
               />
             </div>
 
-            <div className="space-y-2 md:col-span-5">
+            <div className="space-y-2 md:col-span-4">
               <Label htmlFor="motorista" className="text-sm font-semibold text-slate-700">
                 Motorista *
               </Label>
@@ -212,7 +245,7 @@ export default function EquipeSection({ equipes, onChange }) {
           <div className="pt-6 w-full">
             <Button 
               onClick={adicionarEquipe} 
-              disabled={!novaEquipe.codigo_equipe || !novaEquipe.encarregado || novaEquipe.eletricistas.length === 0} 
+              disabled={!novaEquipe.codigo_equipe || !novaEquipe.supervisor || !novaEquipe.encarregado || novaEquipe.eletricistas.length === 0} 
               className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -248,7 +281,11 @@ export default function EquipeSection({ equipes, onChange }) {
                           <Badge className="bg-blue-100 text-blue-800 border-blue-200 font-semibold px-3 py-1 text-sm">{equipe.codigo_equipe}</Badge>
                           <h4 className="text-lg font-bold text-slate-900">Equipe de {equipe.encarregado.split(' - ')[1]}</h4>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <span className="text-sm text-slate-500 font-semibold">Supervisor:</span>
+                            <div className="font-semibold text-slate-900">{equipe.supervisor}</div>
+                          </div>
                           <div>
                             <span className="text-sm text-slate-500 font-semibold">Encarregado:</span>
                             <div className="font-semibold text-slate-900">{equipe.encarregado}</div>
