@@ -15,8 +15,13 @@ const FolhaActions = ({
   onPagamento,
   onCancelar,
   canValidate,
+  isBackoffice = false,
 }) => {
   if (!folha) return null;
+
+  const exportDisabled =
+    isExporting ||
+    (isBackoffice && ["rascunho", "aguardando_correcao"].includes(folha.status));
 
   return (
     <div className="flex flex-nowrap overflow-x-auto gap-1 py-1  justify-left">
@@ -25,7 +30,7 @@ const FolhaActions = ({
         size="icon"
         title="Exportar Folha de Medição"
         onClick={() => onExport?.(folha)}
-        disabled={isExporting}
+        disabled={exportDisabled}
       >
         <FileDown className="w-4 h-4 text-emerald-600" />
       </Button>

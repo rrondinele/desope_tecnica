@@ -137,6 +137,7 @@ const ListaFolhas = () => {
   const [naoValidacaoData, setNaoValidacaoData] = useState({ motivo: "", observacoes: "" });
 
   const canValidate = useMemo(() => profile?.role === 'supervisor', [profile]);
+  const isBackoffice = useMemo(() => profile?.role === 'backoffice', [profile]);
 
   const loadFolhas = useCallback(async () => {
     setIsLoading(true);
@@ -627,6 +628,7 @@ const ListaFolhas = () => {
                           <ListaFolhaActions
                             folha={folha}
                             canValidate={canValidate}
+                            isBackoffice={isBackoffice}
                             isExporting={exportingFolhaId === folha.id}
                             onExport={handleExportToTemplate}
                             onView={(item) => {

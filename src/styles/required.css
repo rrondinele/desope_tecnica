@@ -1,0 +1,9 @@
+label.required-field > span,
+.required-asterisk {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+label.required-field {
+  position: relative;
+}

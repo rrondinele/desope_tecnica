@@ -16,6 +16,32 @@ import EquipamentosSection from "../components/folha/EquipamentosSection";
 import MateriaisSection from "../components/folha/MateriaisSection";
 import Revisao from "../components/nova-folha/Revisao";
 
+const NUMERO_FM_PREFIX_MAP = {
+  "Volta Redonda": {
+    "Expansão": "10.",
+    "Manutenção": "60.",
+  },
+  "Barra do Piraí": {
+    "Expansão": "70.",
+    "Manutenção": "50.",
+  },
+  "Tres Rios": {
+    "Expansão": "00.",
+    "Manutenção": "40.",
+  },
+  "Três Rios": {
+    "Expansão": "00.",
+    "Manutenção": "40.",
+  },
+};
+
+const toMinutes = (time) => {
+  if (!time || typeof time !== "string" || !time.includes(":")) return null;
+  const [hours, minutes] = time.split(":").map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+  return hours * 60 + minutes;
+};
+
 export default function NovaFolha() {
   const { session, profile } = useAuth();
   const navigate = useNavigate();
@@ -23,7 +49,7 @@ export default function NovaFolha() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
-    numero_fm: '',
+    numero_fm: 'FM - ',
     empreiteira: 'CENEGED',
     tecnico_light: '',
     endereco: '',
@@ -71,28 +97,14 @@ export default function NovaFolha() {
     { number: 6, title: "Revisão", description: "Conferir e enviar" }
   ];
 
-  const gerarNumeroFM = useCallback(async () => {
-    try {
-      const todasFolhas = await FolhaMedicao.list(null, 0); 
-      const novoNumero = (todasFolhas?.length || 0) + 1;
-      const numeroFM = `FM-${String(novoNumero).padStart(6, '0')}`;
-      setFormData(prev => ({ ...prev, numero_fm: numeroFM }));
-    } catch (error) {
-      console.error("Erro ao gerar número FM:", error);
-      const numeroFM = `FM${Date.now().toString().slice(-6)}`;
-      setFormData(prev => ({ ...prev, numero_fm: numeroFM }));
-    }
-  }, []);
-
   const loadFolhaParaClonar = useCallback(async (id) => {
     try {
       const folhaOriginal = await FolhaMedicao.get(id);
-      const numeroFMBase = folhaOriginal.numero_fm.split('-v')[0]; // Adjusting for -v format
       const novaFolhaData = {
         ...folhaOriginal,
         status: 'rascunho',
         versao: (folhaOriginal.versao || 1) + 1,
-        numero_fm: `${numeroFMBase}-v${(folhaOriginal.versao || 1) + 1}`,
+        numero_fm: 'FM - ',
         folha_original_id: folhaOriginal.id, // Keep a reference to the original
         data_envio: null,
         data_retorno_distribuidora: null,
@@ -106,10 +118,9 @@ export default function NovaFolha() {
       setFormData(novaFolhaData);
     } catch (error) {
       console.error("Erro ao carregar folha para clonar:", error);
-      // Fallback to generating a new FM number if cloning fails
-      gerarNumeroFM();
+      setFormData((prev) => ({ ...prev, numero_fm: prev.numero_fm || 'FM - ' }));
     }
-  }, [gerarNumeroFM]);
+  }, []);
 
   const loadFolhaParaEdicao = useCallback(async (id, stepNumber) => {
     try {
@@ -158,9 +169,9 @@ export default function NovaFolha() {
     } else if (cloneId) {
       loadFolhaParaClonar(cloneId);
     } else {
-      gerarNumeroFM();
+      setFormData((prev) => ({ ...prev, numero_fm: prev.numero_fm || 'FM - ' }));
     }
-  }, [location.search, loadFolhaParaClonar, loadFolhaParaEdicao, gerarNumeroFM, steps.length]);
+  }, [location.search, loadFolhaParaClonar, loadFolhaParaEdicao, steps.length]);
   
   useEffect(() => {
     const prefix = formData.tipo_processo === 'Manutenção' ? 'OMI-' : 'OII-';
@@ -200,6 +211,60 @@ export default function NovaFolha() {
         alert(`Preencha os campos obrigatórios:\n- ${missing.join('\n- ')}`);
         return;
       }
+
+      const minutosAcionada = toMinutes(formData.hora_acionada);
+      const minutosInicio = toMinutes(formData.hora_inicio);
+      const minutosFim = toMinutes(formData.hora_fim);
+
+      if (
+        minutosAcionada === null ||
+        minutosInicio === null ||
+        minutosFim === null
+      ) {
+        alert("Informe horários válidos (HH:MM) para acionamento, início e fim.");
+        return;
+      }
+
+      if (minutosAcionada >= minutosInicio || minutosAcionada >= minutosFim) {
+        alert("A Hora Acionada deve ser anterior à Hora Início e à Hora Fim.");
+        return;
+      }
+
+      if (minutosInicio <= minutosAcionada || minutosInicio >= minutosFim) {
+        alert("A Hora Início deve ser posterior à Hora Acionada e anterior à Hora Fim.");
+        return;
+      }
+
+      if (minutosFim <= minutosInicio || minutosFim <= minutosAcionada) {
+        alert("A Hora Fim deve ser posterior à Hora Acionada e à Hora Início.");
+        return;
+      }
+
+      const numeroFmRaw = (formData.numero_fm || "").toUpperCase().trim();
+      if (!numeroFmRaw || /^FM\s*-\s*$/.test(numeroFmRaw)) {
+        alert("Informe o número da Folha de Medição (exemplo: FM - 10.123).");
+        return;
+      }
+
+      if (!numeroFmRaw.startsWith("FM -")) {
+        alert("O número da Folha de Medição deve começar com 'FM -'.");
+        return;
+      }
+
+      const numeroSemPrefixo = numeroFmRaw.replace(/^FM\s*-\s*/i, "");
+      if (!/^\d{2}\.\d{3}$/.test(numeroSemPrefixo)) {
+        alert("O número da Folha de Medição deve seguir o formato 'FM - XX.XXX'.");
+        return;
+      }
+
+      const regionalKey = (formData.regional || formData.base_operacional || "").trim();
+      const expectedPrefix = NUMERO_FM_PREFIX_MAP[regionalKey]?.[formData.tipo_processo];
+      if (expectedPrefix && !numeroSemPrefixo.startsWith(expectedPrefix)) {
+        alert(
+          `Para a base ${regionalKey} em ${formData.tipo_processo}, o número deve começar com '${expectedPrefix}' (exemplo: FM - ${expectedPrefix}123).`
+        );
+        return;
+      }
     }
     if (currentStep < steps.length) setCurrentStep(currentStep + 1);
   };
@@ -219,6 +284,7 @@ export default function NovaFolha() {
     try {
       // Limpeza e preparação final dos dados
       const cleanedPayload = { ...payload };
+      cleanedPayload.numero_fm = cleanedPayload.numero_fm ? cleanedPayload.numero_fm.trim() : cleanedPayload.numero_fm;
       Object.keys(cleanedPayload).forEach(key => {
         // Remove campos nulos ou indefinidos que não são booleanos para evitar erros de validação
         if (cleanedPayload[key] === null || cleanedPayload[key] === undefined) {

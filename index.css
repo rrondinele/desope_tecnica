@@ -1,3 +1,16 @@
-@tailwind base; 
-@tailwind components; 
+@import "./styles/required.css";
+
+@tailwind base;
+@tailwind components;
 @tailwind utilities;
+
+
+/* Adicione aqui suas regras */
+[data-radix-sidebar-menu-item] {
+  width: 100%;
+}
+
+.sidebar-menu-button {
+  padding: 0;
+  margin: 0;
+}

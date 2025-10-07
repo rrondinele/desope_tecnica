@@ -13,6 +13,20 @@ export default function DadosGerais({ data, updateData }) {
   const handleInputChange = (field, value) => {
     updateData({ [field]: value });
   };
+
+  const handleNumeroFmChange = (event) => {
+    const raw = (event.target.value || "").toUpperCase();
+    const digitsOnly = raw.replace(/^FM\s*-\s*/i, "").replace(/\D/g, "");
+    const limited = digitsOnly.slice(0, 5);
+    let formatted = limited;
+
+    if (limited.length > 2) {
+      formatted = `${limited.slice(0, 2)}.${limited.slice(2, 5)}`;
+    }
+
+    const numeroFormatado = formatted ? `FM - ${formatted}` : "FM - ";
+    updateData({ numero_fm: numeroFormatado });
+  };
   
   const handleProjetoChange = (e) => {
     const rawValue = e.target.value.replace(/[^0-9]/g, '');
@@ -62,8 +76,17 @@ export default function DadosGerais({ data, updateData }) {
               <Input id="empreiteira" value={data.empreiteira} disabled className="bg-slate-100 font-semibold" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="numero_fm" className="text-sm font-semibold text-slate-700">Nº Folha Medição</Label>
-              <Input id="numero_fm" value={data.numero_fm} disabled className="bg-slate-100 font-semibold font-mono" />
+              <Label htmlFor="numero_fm" className="text-sm font-semibold text-slate-700 required-field">
+                Nº Folha Medição <span aria-hidden="true">*</span>
+              </Label>
+              <Input
+                id="numero_fm"
+                value={data.numero_fm || "FM - "}
+                onChange={handleNumeroFmChange}
+                placeholder="FM - 10.123"
+                required
+                className="border-slate-300 font-semibold font-mono"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="tecnico_light" className="text-sm font-semibold text-slate-700">Técnico Light *</Label>
@@ -158,7 +181,7 @@ export default function DadosGerais({ data, updateData }) {
                     Projeto{" "}
                     {(data.tipo_processo === "Expansão" && data.caracteristica === "Programada") ||
                     (data.tipo_processo === "Manutenção" && data.caracteristica === "Programada") ? (
-                      <span className="text-red-600">*</span>
+                      <span className="required-asterisk">*</span>
                     ) : null}
                   </Label>
                   <div className="flex items-center">
@@ -185,7 +208,7 @@ export default function DadosGerais({ data, updateData }) {
                   <Label htmlFor="ordem_servico" className="text-sm font-semibold text-slate-700">
                     Ordem de Serviço (O.S.){" "}
                     {data.tipo_processo === "Manutenção" && data.caracteristica === "Emergencial" && (
-                      <span className="text-red-600">*</span>
+                      <span className="required-asterisk">*</span>
                     )}
                   </Label>
                   <Input
