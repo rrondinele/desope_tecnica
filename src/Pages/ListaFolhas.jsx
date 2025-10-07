@@ -1,4 +1,3 @@
-// src/Pages/ListaFolhas.jsx
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase, hasSupabase } from "@/services/supabaseClient";
 import { FolhaMedicao } from "@/entities/FolhaMedicao";
@@ -9,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Files, Mail, Share, AlertOctagon, AlertTriangle, Clock, ShieldCheck } from "lucide-react";
+import { Files, Mail, Share, AlertOctagon, AlertTriangle, Clock, ShieldCheck, CheckCircle } from "lucide-react";
 import { format, differenceInBusinessDays } from "date-fns";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -74,6 +73,11 @@ const MOTIVO_PARA_STEP = {
   "Erro Material": 5,
 };
 
+const STATUS_CANCELAMENTO_BY_ORIGEM = {
+  Distribuidora: "cancelado_distribuidora",
+  Empreitera: "cancelado_empreitera",
+};
+
 const extrairMotivoNaoValidacao = (folha) => {
   if (!folha) return null;
   const historico = Array.isArray(folha.status_historico) ? [...folha.status_historico].reverse() : [];
@@ -102,6 +106,28 @@ const obterStepParaMotivo = (motivo) => {
   return MOTIVO_PARA_STEP[motivo] || 1;
 };
 
+const obterStatusAnteriorCancelamento = (folha) => {
+  if (!folha) return null;
+  const historico = Array.isArray(folha.status_historico) ? folha.status_historico : [];
+  if (!historico.length) {
+    return folha.status && folha.status !== "aguardando_cancelamento" ? folha.status : null;
+  }
+
+  const ultimaEntrada = historico[historico.length - 1];
+  if (!ultimaEntrada || ultimaEntrada.status !== "aguardando_cancelamento") {
+    return ultimaEntrada?.status || null;
+  }
+
+  for (let index = historico.length - 2; index >= 0; index -= 1) {
+    const entrada = historico[index];
+    if (entrada?.status && entrada.status !== "aguardando_cancelamento") {
+      return entrada.status;
+    }
+  }
+
+  return "pendente";
+};
+
 const ListaFolhas = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -124,6 +150,7 @@ const ListaFolhas = () => {
   const [showCancelamentoModal, setShowCancelamentoModal] = useState(false);
   const [showValidacaoModal, setShowValidacaoModal] = useState(false);
   const [showNaoValidacaoModal, setShowNaoValidacaoModal] = useState(false);
+  const [showAutorizacaoCancelamentoModal, setShowAutorizacaoCancelamentoModal] = useState(false);
 
   const [envioData, setEnvioData] = useState({ data_envio: format(new Date(), "yyyy-MM-dd"), metodo_envio: "" });
   const [retornoData, setRetornoData] = useState({
@@ -133,8 +160,13 @@ const ListaFolhas = () => {
     motivo_reprovacao: "",
   });
   const [pagamentoData, setPagamentoData] = useState({ numero_pagamento: "", data_pagamento: "" });
-  const [cancelamentoData, setCancelamentoData] = useState({ motivo_cancelamento: "" });
+  const [cancelamentoData, setCancelamentoData] = useState({
+    cancelado_por: "",
+    motivo_cancelamento_tipo: "",
+    motivo_cancelamento: "",
+  });
   const [naoValidacaoData, setNaoValidacaoData] = useState({ motivo: "", observacoes: "" });
+  const [autorizacaoCancelamentoData, setAutorizacaoCancelamentoData] = useState({ justificativa: "" });
 
   const canValidate = useMemo(() => profile?.role === 'supervisor', [profile]);
   const isBackoffice = useMemo(() => profile?.role === 'backoffice', [profile]);
@@ -364,24 +396,133 @@ const ListaFolhas = () => {
   };
 
   const handleCancelarFolha = async () => {
+    if (!cancelamentoData.cancelado_por) {
+      alert("Por favor, selecione quem está cancelando.");
+      return;
+    }
+
+    if (!cancelamentoData.motivo_cancelamento_tipo) {
+      alert("Por favor, selecione o motivo do cancelamento.");
+      return;
+    }
+
     if (!cancelamentoData.motivo_cancelamento) {
-      alert("Por favor, informe o motivo do cancelamento.");
+      alert("Por favor, informe a justificativa do cancelamento.");
       return;
     }
 
     try {
-      await updateStatus(selectedFolha, "cancelado", {
+      const solicitacaoPendente = isBackoffice;
+      const statusFinalCancelamento =
+        STATUS_CANCELAMENTO_BY_ORIGEM[cancelamentoData.cancelado_por] || "cancelado_distribuidora";
+      const novoStatus = solicitacaoPendente ? "aguardando_cancelamento" : statusFinalCancelamento;
+      const detalhesCancelamento = `Cancelado por: ${cancelamentoData.cancelado_por} | Motivo: ${cancelamentoData.motivo_cancelamento_tipo} | Justificativa: ${cancelamentoData.motivo_cancelamento}`;
+      const mensagemObservacao = solicitacaoPendente
+        ? `Cancelamento solicitado. ${detalhesCancelamento}`
+        : `Folha cancelada. ${detalhesCancelamento}`;
+
+      await updateStatus(selectedFolha, novoStatus, {
         motivo_cancelamento: cancelamentoData.motivo_cancelamento,
-        observacoes: `Folha cancelada. Motivo: ${cancelamentoData.motivo_cancelamento}`,
+        cancelado_por: cancelamentoData.cancelado_por,
+        motivo_cancelamento_tipo: cancelamentoData.motivo_cancelamento_tipo,
+        observacoes: mensagemObservacao,
       }, profile);
 
       setShowCancelamentoModal(false);
       setSelectedFolha(null);
-      setCancelamentoData({ motivo_cancelamento: "" });
+      setCancelamentoData({
+        cancelado_por: "",
+        motivo_cancelamento_tipo: "",
+        motivo_cancelamento: "",
+      });
       await loadFolhas();
+
+      if (solicitacaoPendente) {
+        alert("Solicitacao de cancelamento registrada e aguardando aprovacão.");
+      }
     } catch (error) {
       console.error("Erro ao cancelar folha:", error);
-      alert("Não foi possível cancelar a folha. Tente novamente.");
+      alert("Nao foi possivel cancelar a folha. Tente novamente.");
+    }
+  };
+
+  const handleAbrirAutorizacaoCancelamento = (folha) => {
+    setSelectedFolha(folha);
+    setAutorizacaoCancelamentoData({ justificativa: "" });
+    setShowAutorizacaoCancelamentoModal(true);
+  };
+
+  const handlePermitirCancelamento = async () => {
+    if (!selectedFolha) return;
+    const justificativaAutorizacao = autorizacaoCancelamentoData.justificativa.trim();
+    if (!justificativaAutorizacao) {
+      alert("Por favor, informe a justificativa para autorizar o cancelamento.");
+      return;
+    }
+
+    const canceladoPor = selectedFolha.cancelado_por || "Distribuidora";
+    const statusFinalCancelamento =
+      STATUS_CANCELAMENTO_BY_ORIGEM[canceladoPor] || "cancelado_distribuidora";
+    const motivoTipo = selectedFolha.motivo_cancelamento_tipo || "Nao informado";
+    const justificativaSolicitacao = selectedFolha.motivo_cancelamento || "Nao informado";
+    const detalhesCancelamento = `Cancelado por: ${canceladoPor} | Motivo: ${motivoTipo} | Justificativa: ${justificativaSolicitacao}`;
+    const observacao = `Cancelamento aprovado. ${detalhesCancelamento}. Justificativa da autorização: ${justificativaAutorizacao}`;
+
+    try {
+      await updateStatus(selectedFolha, statusFinalCancelamento, {
+        motivo_cancelamento: selectedFolha.motivo_cancelamento,
+        cancelado_por: canceladoPor,
+        motivo_cancelamento_tipo: selectedFolha.motivo_cancelamento_tipo,
+        observacoes: observacao,
+      }, profile);
+
+      setShowAutorizacaoCancelamentoModal(false);
+      setAutorizacaoCancelamentoData({ justificativa: "" });
+      setSelectedFolha(null);
+      await loadFolhas();
+      alert("Cancelamento aprovado com sucesso.");
+    } catch (error) {
+      console.error("Erro ao aprovar cancelamento:", error);
+      alert("Nao foi possivel aprovar o cancelamento. Tente novamente.");
+    }
+  };
+
+  const handleNegarCancelamento = async () => {
+    if (!selectedFolha) return;
+    const justificativaNegativa = autorizacaoCancelamentoData.justificativa.trim();
+    if (!justificativaNegativa) {
+      alert("Por favor, informe a justificativa para negar o cancelamento.");
+      return;
+    }
+
+    const statusAnterior = obterStatusAnteriorCancelamento(selectedFolha);
+    if (!statusAnterior) {
+      alert("Nao foi possivel identificar o status anterior para reverter.");
+      return;
+    }
+
+    const canceladoPor = selectedFolha.cancelado_por || "Nao informado";
+    const motivoTipo = selectedFolha.motivo_cancelamento_tipo || "Nao informado";
+    const justificativaSolicitacao = selectedFolha.motivo_cancelamento || "Nao informado";
+    const detalhesCancelamento = `Cancelado por: ${canceladoPor} | Motivo: ${motivoTipo} | Justificativa: ${justificativaSolicitacao}`;
+    const observacao = `Solicitacao de cancelamento negada. ${detalhesCancelamento}. Justificativa da negativa: ${justificativaNegativa}`;
+
+    try {
+      await updateStatus(selectedFolha, statusAnterior, {
+        motivo_cancelamento: null,
+        cancelado_por: null,
+        motivo_cancelamento_tipo: null,
+        observacoes: observacao,
+      }, profile);
+
+      setShowAutorizacaoCancelamentoModal(false);
+      setAutorizacaoCancelamentoData({ justificativa: "" });
+      setSelectedFolha(null);
+      await loadFolhas();
+      alert("Cancelamento negado e status original restaurado.");
+    } catch (error) {
+      console.error("Erro ao negar cancelamento:", error);
+      alert("Nao foi possivel negar o cancelamento. Tente novamente.");
     }
   };
 
@@ -662,9 +803,14 @@ const ListaFolhas = () => {
                             onEdit={handleEditarFolha}
                             onCancelar={(item) => {
                               setSelectedFolha(item);
-                              setCancelamentoData({ motivo_cancelamento: "" });
+                              setCancelamentoData({
+                                cancelado_por: "",
+                                motivo_cancelamento_tipo: "",
+                                motivo_cancelamento: "",
+                              });
                               setShowCancelamentoModal(true);
                             }}
+                            onAutorizarCancelamento={handleAbrirAutorizacaoCancelamento}
                           />
                         </TableCell>
                       </TableRow>
@@ -794,6 +940,57 @@ const ListaFolhas = () => {
                 )}
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={showAutorizacaoCancelamentoModal}
+          onOpenChange={(open) => {
+            setShowAutorizacaoCancelamentoModal(open);
+            if (!open) {
+              setAutorizacaoCancelamentoData({ justificativa: "" });
+              setSelectedFolha(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-md sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-emerald-700">
+                <CheckCircle className="w-5 h-5" />
+                Autorizar cancelamento
+              </DialogTitle>
+              <DialogDescription>
+                Informe a justificativa para autorizar ou negar o cancelamento da folha <strong>{selectedFolha?.numero_fm}</strong>.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-semibold">Justificativa *</label>
+                <Textarea
+                  placeholder="Descreva a justificativa para seguir com a decisao"
+                  value={autorizacaoCancelamentoData.justificativa}
+                  onChange={(event) =>
+                    setAutorizacaoCancelamentoData({ justificativa: event.target.value })
+                  }
+                  rows={4}
+                />
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setShowAutorizacaoCancelamentoModal(false)}>
+                Fechar
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleNegarCancelamento}
+                className="border-red-200 text-red-600 hover:bg-red-50"
+              >
+                Negar Cancelamento
+              </Button>
+              <Button onClick={handlePermitirCancelamento} className="bg-emerald-600 hover:bg-emerald-700">
+                Permitir Cancelamento
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
         <Dialog open={showEnvioModal} onOpenChange={setShowEnvioModal}>
@@ -984,12 +1181,55 @@ const ListaFolhas = () => {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-semibold">Motivo do Cancelamento *</label>
+                <label className="mb-2 block text-sm font-semibold">Cancelado por *</label>
+                <Select
+                  value={cancelamentoData.cancelado_por}
+                  onValueChange={(value) =>
+                    setCancelamentoData((prev) => ({
+                      ...prev,
+                      cancelado_por: value,
+                    }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione uma opção" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Distribuidora">Distribuidora</SelectItem>
+                    <SelectItem value="Empreitera">Empreitera</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-semibold">Motivo *</label>
+                <Select
+                  value={cancelamentoData.motivo_cancelamento_tipo}
+                  onValueChange={(value) =>
+                    setCancelamentoData((prev) => ({
+                      ...prev,
+                      motivo_cancelamento_tipo: value,
+                    }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione uma opção" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Interno">Interno</SelectItem>
+                    <SelectItem value="Externo">Externo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-semibold">Justificativa do Cancelamento *</label>
                 <Textarea
                   placeholder="Ex: Erro de digitação, solicitação da distribuidora, etc."
                   value={cancelamentoData.motivo_cancelamento}
                   onChange={(event) =>
-                    setCancelamentoData({ motivo_cancelamento: event.target.value })
+                    setCancelamentoData((prev) => ({
+                      ...prev,
+                      motivo_cancelamento: event.target.value,
+                    }))
                   }
                   rows={4}
                 />

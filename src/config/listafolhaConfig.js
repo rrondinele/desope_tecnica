@@ -21,6 +21,11 @@ export const STATUS_CONFIG = {
     color: "bg-blue-100 text-blue-800 border-blue-200",
     icon: Send,
   },
+  aguardando_cancelamento: {
+    label: "Aguardando Cancelamento",
+    color: "bg-orange-100 text-orange-800 border-orange-200",
+    icon: AlertTriangle,
+  },
   aprovado: {
     label: "Aprovado",
     color: "bg-green-100 text-green-800 border-green-200",
@@ -36,8 +41,13 @@ export const STATUS_CONFIG = {
     color: "bg-purple-100 text-purple-800 border-purple-200",
     icon: DollarSign,
   },
-  cancelado: {
-    label: "Cancelado",
+  cancelado_distribuidora: {
+    label: "Cancelado por Distribuidora",
+    color: "bg-red-100 text-red-800 border-red-200",
+    icon: XCircle,
+  },
+  cancelado_empreitera: {
+    label: "Cancelado por Empreitera",
     color: "bg-red-100 text-red-800 border-red-200",
     icon: XCircle,
   },

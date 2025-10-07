@@ -16,7 +16,8 @@ const statusConfig = {
   aprovado: { label: "Aprovado", color: "#10b981", icon: CheckCircle },
   reprovado: { label: "Reprovado", color: "#f97316", icon: AlertTriangle },
   pago: { label: "Pago", color: "#8b5cf6", icon: DollarSign },
-  cancelado: { label: "Cancelado", color: "#ef4444", icon: AlertTriangle }
+  cancelado_distribuidora: { label: "Cancelado por Distribuidora", color: "#ef4444", icon: AlertTriangle },
+  cancelado_empreitera: { label: "Cancelado por Empreitera", color: "#ef4444", icon: AlertTriangle }
 };
 
 // Helper para corrigir a data para o fuso local

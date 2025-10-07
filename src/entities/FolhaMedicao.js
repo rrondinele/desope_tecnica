@@ -1,6 +1,3 @@
-// src/entities/FolhaMedicao.js
-// Implementação com fallback: usa Supabase (se configurado) ou localStorage.
-
 import { supabase, hasSupabase } from "@/services/supabaseClient";
 
 const STORAGE_KEY = "desope.folhas_medicao";
@@ -45,6 +42,8 @@ function normalizeMainRecord(data) {
   d.data_pagamento = toNullIfEmpty(d.data_pagamento);
   d.numero_pagamento = toNullIfEmpty(d.numero_pagamento);
   d.motivo_cancelamento = toNullIfEmpty(d.motivo_cancelamento);
+  d.motivo_cancelamento_tipo = toNullIfEmpty(d.motivo_cancelamento_tipo);
+  d.cancelado_por = toNullIfEmpty(d.cancelado_por);
   d.tipo_motivo_reprovacao = toNullIfEmpty(d.tipo_motivo_reprovacao);
   d.motivo_reprovacao = toNullIfEmpty(d.motivo_reprovacao);
   return d;
