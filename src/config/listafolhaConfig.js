@@ -42,12 +42,12 @@ export const STATUS_CONFIG = {
     icon: DollarSign,
   },
   cancelado_distribuidora: {
-    label: "Cancelado pela Distribuidora",
+    label: "Cancelado por Distribuidora",
     color: "bg-red-100 text-red-800 border-red-200",
     icon: XCircle,
   },
   cancelado_empreitera: {
-    label: "Cancelado pela Empreitera",
+    label: "Cancelado por Empreitera",
     color: "bg-red-100 text-red-800 border-red-200",
     icon: XCircle,
   },

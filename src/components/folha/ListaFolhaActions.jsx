@@ -1,7 +1,17 @@
 ﻿// src/components/folha/ListaFolhaActions.jsx
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { FileDown, Eye, Send, Edit, DollarSign, XCircle, ShieldCheck, Pencil } from "lucide-react";
+import {
+  FileDown,
+  Eye,
+  Send,
+  Edit,
+  DollarSign,
+  XCircle,
+  ShieldCheck,
+  Pencil,
+  CheckCircle,
+} from "lucide-react";
 
 const FolhaActions = ({
   folha,
@@ -14,6 +24,7 @@ const FolhaActions = ({
   onRetorno,
   onPagamento,
   onCancelar,
+  onAutorizarCancelamento,
   canValidate,
   isBackoffice = false,
 }) => {
@@ -66,7 +77,7 @@ const FolhaActions = ({
         </Button>
       )}
 
-      {folha.status === "pendente" && (
+      {folha.status === "pendente" && !canValidate && (
         <Button
           variant="outline"
           size="icon"
@@ -99,14 +110,26 @@ const FolhaActions = ({
         </Button>
       )}
 
-      {['pendente', 'aguardando_aprovacao'].includes(folha.status) && (
+      {isBackoffice &&
+        ['pendente', 'aguardando_aprovacao'].includes(folha.status) && (
         <Button
           variant="outline"
           size="icon"
-          title="Cancelar folha"
+          title="Solicitar cancelamento da folha"
           onClick={() => onCancelar?.(folha)}
         >
           <XCircle className="w-4 h-4 text-red-600" />
+        </Button>
+      )}
+
+      {folha.status === "aguardando_cancelamento" && !isBackoffice && (
+        <Button
+          variant="outline"
+          size="icon"
+          title="Autorizar cancelamento"
+          onClick={() => onAutorizarCancelamento?.(folha)}
+        >
+          <CheckCircle className="w-4 h-4 text-emerald-600" />
         </Button>
       )}
     </div>

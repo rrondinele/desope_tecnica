@@ -262,7 +262,6 @@ export default function ServicosStep({ data, updateData }) {
               <div className="p-4 bg-slate-100 border-t border-slate-200 flex justify-between items-center">
                 <span className="text-lg font-semibold text-slate-900">Valor Total Geral:</span>
                 <div className="flex items-center gap-2 text-2xl font-bold text-green-700">
-                  <DollarSign className="w-6 h-6" />
                   <span>
                     {valorTotalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </span>
