@@ -1,13 +1,9 @@
-import React, { useState } from "react";
+import React from "react";
 import { useAuth } from "@/context/AuthProvider";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Save, AlertTriangle, Building, FileCog, Users, Wrench, Box, DollarSign, ArrowLeft, RefreshCw } from "lucide-react";
+import { AlertTriangle, Building, FileCog, Users, Wrench, Box } from "lucide-react";
 import { format } from "date-fns";
-import { createPageUrl } from "@/utils";
-import { FolhaMedicao } from "@/entities/FolhaMedicao";
 
 const InfoItem = ({ label, value }) => (
   <div>
@@ -28,48 +24,8 @@ const SectionCard = ({ title, icon: Icon, children }) => (
   </Card>
 );
 
-export default function Revisao({ data, onPrevious }) {
-  const { session, profile } = useAuth();
-  const [isSaving, setIsSaving] = useState(false);
-  const navigate = useNavigate();
-
-  const handleSubmit = async (finalStatus) => {
-    setIsSaving(true);
-    try {
-      let payload = { 
-        ...data, 
-        status: finalStatus,
-        created_by_user_id: profile?.id,
-        created_by_matricula: profile?.matricula,
-        created_by_name: profile?.full_name
-      };
-      
-      if (payload?.id) {
-        // Se for uma atualização, apenas chama o update
-        await FolhaMedicao.update(payload.id, payload);
-      } else {
-        // Se for uma criação, adiciona o primeiro registro ao histórico
-        const initialHistory = {
-          status: 'rascunho',
-          data: new Date().toISOString(),
-          usuario: profile?.full_name || profile?.email || 'sistema',
-          observacoes: 'Folha de medição criada.'
-        };
-        
-        payload.status_historico = [initialHistory];
-        
-        await FolhaMedicao.create(payload);
-      }
-      
-      alert('Folha salva com sucesso!');
-      navigate(createPageUrl("ListaFolhas"));
-    } catch (e) {
-      console.error("Erro ao salvar a folha:", e);
-      alert("Não foi possível salvar. Verifique os campos obrigatórios e tente novamente.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+export default function Revisao({ data }) {
+  const { profile } = useAuth();
 
   return (
     <div className="space-y-8">
@@ -179,31 +135,6 @@ export default function Revisao({ data, onPrevious }) {
             </div>
           </SectionCard>
         </div>
-      </div>
-      
-      <div className="flex justify-between pt-8 mt-8 border-t">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onPrevious}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Voltar
-        </Button>
-        
-        <Button
-          onClick={() => handleSubmit('rascunho')}
-          disabled={isSaving}
-          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold px-8 py-2 flex items-center gap-2"
-        >
-          {isSaving ? 'Salvando...' : 'Salvar e Concluir'}
-          {isSaving ? (
-            <RefreshCw className="w-4 h-4 animate-spin" />
-          ) : (
-            <Save className="w-4 h-4" />
-          )}
-        </Button>
       </div>
     </div>
   );

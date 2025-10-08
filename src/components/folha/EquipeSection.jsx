@@ -11,7 +11,7 @@ import { supabase } from "@/services/supabaseClient";
 
 // Lista de códigos de equipe
 const codigosEquipe = [
-  "EX001", "EX002", "EX003", "EX004", "EX005", "EX007", "EX011", "EX012", "EX014", "EX015", "EX018", 
+  "EX001", "EX002", "EX003", "EX004", "EX005", "EX007", "EX008", "EX011", "EX012", "EX014", "EX015", "EX018", "EX020",
   "MT001", "MT002", "MT003", "MT004", "MT005",
   "LV001", "LV002"
 ];
@@ -34,7 +34,6 @@ export default function EquipeSection({ equipes, onChange }) {
     motorista: '',
     eletricistas: []
   });
-  const [eletricistaInput, setEletricistaInput] = useState('');
   const [eletricistasDisponiveis, setEletricistasDisponiveis] = useState([]);
 
   // Verifica se o código da equipe foi selecionado
@@ -44,7 +43,6 @@ export default function EquipeSection({ equipes, onChange }) {
     if (!eletricista) return;
     if (novaEquipe.eletricistas.length >= 4) {
       alert('Limite de 4 eletricistas por equipe atingido.');
-      setEletricistaInput('');
       return;
     }
     if (eletricista && !novaEquipe.eletricistas.includes(eletricista)) {
@@ -52,7 +50,6 @@ export default function EquipeSection({ equipes, onChange }) {
         ...prev,
         eletricistas: [...prev.eletricistas, eletricista]
       }));
-      setEletricistaInput('');
     }
   };
 
@@ -272,7 +269,6 @@ export default function EquipeSection({ equipes, onChange }) {
             </Label>
             <div className="flex gap-3">
               <Select
-                value={eletricistaInput || undefined}
                 onValueChange={(val) => {
                   if (val === EMPTY_ELETRICISTA_OPTION) return;
                   adicionarEletricista(val);

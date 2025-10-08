@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/AuthProvider";
 import { FolhaMedicao } from "@/entities/FolhaMedicao"; 
 import { Button } from "@/components/ui/button";
@@ -88,7 +88,51 @@ export default function NovaFolha() {
     numero_pagamento: '',
   });
 
-  const steps = [
+  const validateDadosGerais = useCallback((data) => {
+    const messages = [];
+    const requiredFields = [
+      ['tecnico_light', 'Técnico Light'],
+      ['data_obra', 'Data da Obra'],
+      ['hora_acionada', 'Hora Acionada'],
+      ['hora_inicio', 'Hora Início'],
+      ['hora_fim', 'Hora Fim'],
+      ['endereco', 'Endereço Completo'],
+      ['municipio', 'Município'],
+    ];
+
+    const missing = requiredFields
+      .filter(([key]) => !data[key])
+      .map(([, label]) => label);
+
+    if (data.tipo_processo === 'Expansão') {
+      if (!data.projeto || data.projeto === 'OII-') {
+        missing.push('Projeto');
+      }
+    } else if (data.tipo_processo === 'Manutenção') {
+      const isProjetoValido = data.projeto && data.projeto !== 'OMI-';
+      const isOsValida = data.ordem_servico && data.ordem_servico.trim() !== '';
+      if (!isProjetoValido && !isOsValida) {
+        missing.push('Projeto ou Ordem de Serviço');
+      }
+    }
+
+    if (missing.length) {
+      messages.push(`Preencha os campos obrigatórios:\n- ${missing.join('\n- ')}`);
+    }
+
+    return { valid: messages.length === 0, messages };
+  }, []);
+
+  const equipesCount = formData.equipes?.length ?? 0;
+  const servicosCount = formData.servicos?.length ?? 0;
+  const isNextDisabled = useMemo(() => {
+    if (currentStep === 1) return !validateDadosGerais(formData).valid;
+    if (currentStep === 2) return equipesCount === 0;
+    if (currentStep === 3) return servicosCount === 0;
+    return false;
+  }, [currentStep, formData, equipesCount, servicosCount, validateDadosGerais]);
+
+const steps = [
     { number: 1, title: "Dados Gerais", description: "Informações da obra" },
     { number: 2, title: "Equipes", description: "Equipes envolvidas" },
     { number: 3, title: "Serviços", description: "Serviços executados" },
@@ -96,6 +140,9 @@ export default function NovaFolha() {
     { number: 5, title: "Materiais", description: "Utilizados/sobras" },
     { number: 6, title: "Revisão", description: "Conferir e enviar" }
   ];
+  const totalSteps = steps.length;
+  const isLastStep = currentStep === totalSteps;
+  const isFirstStep = currentStep === 1;
 
   const loadFolhaParaClonar = useCallback(async (id) => {
     try {
@@ -183,32 +230,9 @@ export default function NovaFolha() {
 
   const handleNext = () => {
     if (currentStep === 1) {
-      const missing = [];
-      const req = [
-        ['tecnico_light','Técnico Light'],
-        ['data_obra','Data da Obra'],
-        ['hora_acionada','Hora Acionada'],
-        ['hora_inicio','Hora Início'],
-        ['hora_fim','Hora Fim'],
-        ['endereco','Endereço Completo'],
-        ['municipio','Município'],
-      ];
-      req.forEach(([k,label]) => { if (!formData[k]) missing.push(label); });
-// Validação para Dados do Processo
-      if (formData.tipo_processo === 'Expansão') {
-        if (!formData.projeto || formData.projeto === 'OII-') {
-          missing.push('Projeto');
-        }
-      } else if (formData.tipo_processo === 'Manutenção') {
-        const isProjetoValido = formData.projeto && formData.projeto !== 'OMI-';
-        const isOsValida = formData.ordem_servico && formData.ordem_servico.trim() !== '';
-        if (!isProjetoValido && !isOsValida) {
-          missing.push('Projeto ou Ordem de Serviço');
-        }
-      }
-
-      if (missing.length) {
-        alert(`Preencha os campos obrigatórios:\n- ${missing.join('\n- ')}`);
+      const { valid, messages } = validateDadosGerais(formData);
+      if (!valid) {
+        alert(messages.join('\n\n'));
         return;
       }
 
@@ -221,43 +245,43 @@ export default function NovaFolha() {
         minutosInicio === null ||
         minutosFim === null
       ) {
-        alert("Informe horários válidos (HH:MM) para acionamento, início e fim.");
+        alert('Informe horários válidos (HH:MM) para acionamento, início e fim.');
         return;
       }
 
       if (minutosAcionada >= minutosInicio || minutosAcionada >= minutosFim) {
-        alert("A Hora Acionada deve ser anterior à Hora Início e à Hora Fim.");
+        alert('A Hora Acionada deve ser anterior à Hora Início e à Hora Fim.');
         return;
       }
 
       if (minutosInicio <= minutosAcionada || minutosInicio >= minutosFim) {
-        alert("A Hora Início deve ser posterior à Hora Acionada e anterior à Hora Fim.");
+        alert('A Hora Início deve ser posterior à Hora Acionada e anterior à Hora Fim.');
         return;
       }
 
       if (minutosFim <= minutosInicio || minutosFim <= minutosAcionada) {
-        alert("A Hora Fim deve ser posterior à Hora Acionada e à Hora Início.");
+        alert('A Hora Fim deve ser posterior à Hora Acionada e à Hora Início.');
         return;
       }
 
-      const numeroFmRaw = (formData.numero_fm || "").toUpperCase().trim();
+      const numeroFmRaw = (formData.numero_fm || '').toUpperCase().trim();
       if (!numeroFmRaw || /^FM\s*-\s*$/.test(numeroFmRaw)) {
-        alert("Informe o número da Folha de Medição (exemplo: FM - 10.123).");
+        alert('Informe o número da Folha de Medição (exemplo: FM - 10.123).');
         return;
       }
 
-      if (!numeroFmRaw.startsWith("FM -")) {
+      if (!numeroFmRaw.startsWith('FM -')) {
         alert("O número da Folha de Medição deve começar com 'FM -'.");
         return;
       }
 
-      const numeroSemPrefixo = numeroFmRaw.replace(/^FM\s*-\s*/i, "");
+      const numeroSemPrefixo = numeroFmRaw.replace(/^FM\s*-\s*/i, '');
       if (!/^\d{2}\.\d{3}$/.test(numeroSemPrefixo)) {
         alert("O número da Folha de Medição deve seguir o formato 'FM - XX.XXX'.");
         return;
       }
 
-      const regionalKey = (formData.regional || formData.base_operacional || "").trim();
+      const regionalKey = (formData.regional || formData.base_operacional || '').trim();
       const expectedPrefix = NUMERO_FM_PREFIX_MAP[regionalKey]?.[formData.tipo_processo];
       if (expectedPrefix && !numeroSemPrefixo.startsWith(expectedPrefix)) {
         alert(
@@ -265,6 +289,14 @@ export default function NovaFolha() {
         );
         return;
       }
+    }
+    if (currentStep === 2 && (formData.equipes?.length ?? 0) === 0) {
+      alert('Adicione ao menos uma equipe para continuar.');
+      return;
+    }
+    if (currentStep === 3 && (formData.servicos?.length ?? 0) === 0) {
+      alert('Adicione ao menos um serviço para continuar.');
+      return;
     }
     if (currentStep < steps.length) setCurrentStep(currentStep + 1);
   };
@@ -306,7 +338,7 @@ export default function NovaFolha() {
       }
       try {
         if (hasSupabase()) {
-          alert("Folha salva com sucesso no Supabase!");
+          alert("Folha salva com sucesso!");
         } else {
           alert("Folha salva com sucesso no armazenamento local (Supabase desativado).");
         }
@@ -318,6 +350,11 @@ export default function NovaFolha() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleFinalSave = () => {
+    if (isSaving) return;
+    handleSave({ ...formData, status: formData.status || 'rascunho' });
   };
 
   const renderCurrentStep = () => {
@@ -333,7 +370,7 @@ export default function NovaFolha() {
       case 5:
         return <MateriaisSection materiaisInstalados={formData.materiais_instalados} materiaisRetirados={formData.materiais_retirados} onChangeInstalados={(materiais_instalados) => updateFormData({ materiais_instalados })} onChangeRetirados={(materiais_retirados) => updateFormData({ materiais_retirados })} />;
       case 6:
-        return <Revisao data={formData} onSave={handleSave} isSaving={isSaving} onPrevious={handlePrevious} />;
+        return <Revisao data={formData} />;
       default:
         return null;
     }
@@ -341,7 +378,7 @@ export default function NovaFolha() {
   
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto pb-24">
         <div className="flex items-center gap-4 mb-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900 flex items-center gap-2">
@@ -360,22 +397,28 @@ export default function NovaFolha() {
           <CardHeader className="border-b border-slate-100">
           </CardHeader>
           <CardContent className="p-4 md:p-8">
-            {renderCurrentStep()}
-          </CardContent>
-        </Card>
-        
-        {currentStep < 6 && (
-          <div className="flex justify-between mt-8">
-            <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 1}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
+        {renderCurrentStep()}
+      </CardContent>
+    </Card>
+      </div>
+      <div className="max-w-6xl mx-auto sticky bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 px-4 py-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <Button variant="outline" onClick={handlePrevious} disabled={isFirstStep}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Voltar
+          </Button>
+          {isLastStep ? (
+            <Button onClick={handleFinalSave} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed">
+              {isSaving ? 'Salvando...' : 'Salvar e Concluir'}
+              {!isSaving && <Save className="w-4 h-4 ml-2" />}
             </Button>
-            <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
+          ) : (
+            <Button onClick={handleNext} disabled={isNextDisabled} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed">
               Próximo
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

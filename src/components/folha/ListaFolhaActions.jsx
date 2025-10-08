@@ -99,7 +99,7 @@ const FolhaActions = ({
         </Button>
       )}
 
-      {folha.status === "aprovado" && (
+      {folha.status === "aprovado" && canValidate && (
         <Button
           variant="outline"
           size="icon"

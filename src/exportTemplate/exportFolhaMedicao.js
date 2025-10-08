@@ -170,20 +170,48 @@ const applyMappingsToSheet = (sheet, folha) => {
 
   const teamMappingConfig = teamMapping.equipes || {};
   const { eletricistas: eletricistasRef, ...teamMappingWithoutEletricistas } = teamMappingConfig;
+  const equipes = Array.isArray(folha.equipes) ? folha.equipes : [];
 
-  fillCollection(sheet, folha.equipes || [], teamMappingWithoutEletricistas);
+  const normalizeString = (value) => {
+    if (value === undefined || value === null) {
+      return "";
+    }
+    if (typeof value === "string") {
+      return value.trim();
+    }
+    return String(value).trim();
+  };
+
+  Object.entries(teamMappingWithoutEletricistas).forEach(([field, cellRef]) => {
+    const values = equipes.map((team) => normalizeString(team?.[field] ?? ""));
+
+    const trimmedValues = [...values];
+    while (trimmedValues.length > 0 && trimmedValues[trimmedValues.length - 1] === "") {
+      trimmedValues.pop();
+    }
+
+    let combinedValue = "";
+    if (field === "codigo_equipe") {
+      combinedValue = trimmedValues.filter(Boolean).join(" ");
+    } else if (["encarregado", "motorista"].includes(field)) {
+      combinedValue = trimmedValues.join("\n");
+    } else {
+      combinedValue = trimmedValues.filter(Boolean).join("\n");
+    }
+
+    setSheetValue(sheet, cellRef, combinedValue, field);
+  });
 
   if (eletricistasRef) {
-    const baseRef = parseCellReference(eletricistasRef);
-    (folha.equipes || []).forEach((equipe, equipeIndex) => {
-      const eletricistas = Array.isArray(equipe?.eletricistas) ? equipe.eletricistas : [];
-      const startRow = baseRef.row + equipeIndex;
-
-      eletricistas.forEach((nome, idx) => {
-        const targetCell = `${baseRef.column}${startRow + idx}`;
-        setSheetValue(sheet, targetCell, nome, 'eletricistas');
-      });
+    const eletricistasList = equipes.flatMap((team) => {
+      const eletricistas = Array.isArray(team?.eletricistas) ? team.eletricistas : [];
+      return eletricistas
+        .map((nome) => normalizeString(nome))
+        .filter((text) => text.length > 0);
     });
+
+    const combinedEletricistas = eletricistasList.join("\n");
+    setSheetValue(sheet, eletricistasRef, combinedEletricistas, "eletricistas");
   }
 
   const servicosMapping = serviceMapping.servicos || {};
