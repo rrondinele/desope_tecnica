@@ -19,6 +19,7 @@ export default function SearchableSelect({
   where = [],                  // [{ column, operator:'ilike'|'eq'|'in'|..., value }]
   exclude,                     // { column:'matricula_ceneged', values:[...] }
   maxRows = 50,                // opcional
+  orFilter,
 }) {
   const [query, setQuery] = useState(controlledValue || '')
   const [items, setItems] = useState([])
@@ -73,6 +74,10 @@ export default function SearchableSelect({
         }
       }
 
+      if (orFilter) {
+        q = q.or(orFilter)
+      }
+
       const { data, error } = await q
       if (error) {
         console.error('SearchableSelect error:', error)
@@ -91,7 +96,8 @@ export default function SearchableSelect({
     cols,
     maxRows,
     query,
-    JSON.stringify(where || [])
+    JSON.stringify(where || []),
+    orFilter
   ])
 
   const filteredItems = useMemo(() => {

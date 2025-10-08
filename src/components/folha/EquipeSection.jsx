@@ -86,16 +86,21 @@ export default function EquipeSection({ equipes, onChange }) {
   const getColaboradorLabel = (row) => row ? `${row.matricula_ceneged} - ${row.nome}` : '';
   const getColaboradorValue = (row) => row ? `${row.matricula_ceneged} - ${row.nome}` : '';
   // Filtros derivados do código da equipe
-  const departamento = deptoFromCodigo(novaEquipe.codigo_equipe);
-  const whereDepto = departamento ? [{ column: 'descricao_departamento', operator: 'ilike', value: `%${departamento}%` }] : [];
   const prefix = novaEquipe.codigo_equipe ? novaEquipe.codigo_equipe.slice(0, 2).toUpperCase() : '';
-  let supervisorFuncFilter = [];
-  if (prefix === 'EX' || prefix === 'MT') {
-    supervisorFuncFilter = [{ column: 'funcao', operator: 'ilike', value: '%SUPERVISOR OPERACAO ELETRIC%' }];
-  } else if (prefix === 'LV') {
-    supervisorFuncFilter = [{ column: 'funcao', operator: 'ilike', value: '%S/SUPERVISOR(A) LINHA VIVA%' }];
-  }
-  const supervisorWhere = [...supervisorFuncFilter, ...whereDepto];
+  const isLinhaViva = prefix === 'LV';
+  const deptOrFilterString = isCodigoSelecionado && !isLinhaViva ? 'descricao_departamento.ilike.%EXPANSÃO%,descricao_departamento.ilike.%MANUTENÇÃO%' : null;
+  const deptSingleFilter = isCodigoSelecionado && isLinhaViva ? { column: 'descricao_departamento', operator: 'ilike', value: '%LINHA VIVA%' } : null;
+
+  const buildFilters = (funcPattern) => {
+    const filters = [{ column: 'funcao', operator: 'ilike', value: funcPattern }];
+    if (deptSingleFilter) filters.push(deptSingleFilter);
+    return filters;
+  };
+
+  const supervisorWhere = buildFilters('%SUPERVISOR%');
+  const encarregadoWhere = buildFilters('%ENCARREGADO%');
+  const motoristaWhere = buildFilters('%MOTORISTA%');
+
   // Excluir colaboradores já escolhidos nesta folha
   const usados = new Set();
   (equipes || []).forEach(eq => {
@@ -120,13 +125,15 @@ export default function EquipeSection({ equipes, onChange }) {
       }
 
       try {
-        const baseQuery = supabase
+        let baseQuery = supabase
           .from('cen_colaboradores')
           .select('matricula_ceneged, nome, funcao, descricao_departamento')
           .ilike('funcao', '%ELETRICISTA%');
 
-        if (departamento) {
-          baseQuery.ilike('descricao_departamento', `%${departamento}%`);
+        if (isLinhaViva && deptSingleFilter) {
+          baseQuery = baseQuery.ilike('descricao_departamento', deptSingleFilter.value);
+        } else if (!isLinhaViva && deptOrFilterString) {
+          baseQuery = baseQuery.or(deptOrFilterString);
         }
 
         const { data, error } = await baseQuery.order('nome', { ascending: true });
@@ -148,7 +155,7 @@ export default function EquipeSection({ equipes, onChange }) {
     return () => {
       isActive = false;
     };
-  }, [isCodigoSelecionado, departamento]);
+  }, [isCodigoSelecionado, isLinhaViva, deptOrFilterString]);
 
   const eletricistasLivres = useMemo(() => {
     if (!Array.isArray(eletricistasDisponiveis)) return [];
@@ -157,7 +164,7 @@ export default function EquipeSection({ equipes, onChange }) {
       const valor = getColaboradorValue(row);
       return !selecionados.has(valor);
     });
-  }, [eletricistasDisponiveis, novaEquipe.eletricistas]);
+  }, [eletricistasDisponiveis, novaEquipe.eletricistas, getColaboradorValue]);
 
   return (
     <div className="space-y-2">
@@ -201,6 +208,7 @@ export default function EquipeSection({ equipes, onChange }) {
                 columnName="nome"
                 selectColumns="matricula_ceneged, nome, funcao, descricao_departamento"
                 where={supervisorWhere}
+                orFilter={deptOrFilterString}
                 exclude={excludeProp}
                 placeholder="Pesquisar supervisor..."
                 value={novaEquipe.supervisor}
@@ -221,7 +229,8 @@ export default function EquipeSection({ equipes, onChange }) {
                 tableName="cen_colaboradores"
                 columnName="nome"
                 selectColumns="matricula_ceneged, nome, funcao, descricao_departamento"
-                where={[{ column: 'funcao', operator: 'ilike', value: '%ENCARREGADO%' }, ...whereDepto]}
+                where={encarregadoWhere}
+                orFilter={deptOrFilterString}
                 exclude={excludeProp}
                 placeholder="Pesquisar encarregado..."
                 value={novaEquipe.encarregado}
@@ -242,7 +251,8 @@ export default function EquipeSection({ equipes, onChange }) {
                 tableName="cen_colaboradores"
                 columnName="nome"
                 selectColumns="matricula_ceneged, nome, funcao, descricao_departamento"
-                where={[{ column: 'funcao', operator: 'ilike', value: '%MOTORISTA%' }, ...whereDepto]}
+                where={motoristaWhere}
+                orFilter={deptOrFilterString}
                 exclude={excludeProp}
                 placeholder="Pesquisar motorista..."
                 value={novaEquipe.motorista}
@@ -262,11 +272,10 @@ export default function EquipeSection({ equipes, onChange }) {
             </Label>
             <div className="flex gap-3">
               <Select
-                value={eletricistaInput}
+                value={eletricistaInput || undefined}
                 onValueChange={(val) => {
                   if (val === EMPTY_ELETRICISTA_OPTION) return;
                   adicionarEletricista(val);
-                  setEletricistaInput('');
                 }}
                 disabled={!isCodigoSelecionado || eletricistasLivres.length === 0}
               >
