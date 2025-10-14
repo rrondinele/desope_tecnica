@@ -15,6 +15,7 @@ export default function DadosGerais({ data, updateData }) {
   };
 
   const handleNumeroFmChange = (event) => {
+    if (data.numero_fm_bloqueado) return;
     const raw = (event.target.value || "").toUpperCase();
     const digitsOnly = raw.replace(/^FM\s*-\s*/i, "").replace(/\D/g, "");
     const limited = digitsOnly.slice(0, 5);
@@ -85,7 +86,8 @@ export default function DadosGerais({ data, updateData }) {
                 onChange={handleNumeroFmChange}
                 placeholder="FM - 10.123"
                 required
-                className="border-slate-300 font-semibold font-mono"
+                disabled={data.numero_fm_bloqueado}
+                className={`border-slate-300 font-semibold font-mono ${data.numero_fm_bloqueado ? "bg-slate-100 cursor-not-allowed" : ""}`.trim()}
               />
             </div>
             <div className="space-y-2">

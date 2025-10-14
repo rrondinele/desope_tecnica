@@ -1,5 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Input } from "@/components/ui/input";
+import React, { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Users, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Importe o Select
 import SearchableSelect from "@/components/SearchableSelect";
-import { supabase } from "@/services/supabaseClient";
 
 // Lista de códigos de equipe
 const codigosEquipe = [
@@ -26,7 +24,6 @@ function deptoFromCodigo(cod) {
 }
 
 export default function EquipeSection({ equipes, onChange }) {
-  const EMPTY_ELETRICISTA_OPTION = '__no_eletricista__';
   const [novaEquipe, setNovaEquipe] = useState({
     codigo_equipe: '',
     supervisor: '',
@@ -34,23 +31,25 @@ export default function EquipeSection({ equipes, onChange }) {
     motorista: '',
     eletricistas: []
   });
-  const [eletricistasDisponiveis, setEletricistasDisponiveis] = useState([]);
+  const [eletricistaSelectValue, setEletricistaSelectValue] = useState('');
 
   // Verifica se o código da equipe foi selecionado
   const isCodigoSelecionado = !!novaEquipe.codigo_equipe;
 
   const adicionarEletricista = (eletricista) => {
-    if (!eletricista) return;
+    if (!eletricista) return false;
     if (novaEquipe.eletricistas.length >= 4) {
-      alert('Limite de 4 eletricistas por equipe atingido.');
-      return;
+      alert('Máximo de 4 eletricistas por equipe atingido.');
+      return false;
     }
     if (eletricista && !novaEquipe.eletricistas.includes(eletricista)) {
       setNovaEquipe(prev => ({
         ...prev,
         eletricistas: [...prev.eletricistas, eletricista]
       }));
+      return true;
     }
+    return false;
   };
 
   const removerEletricista = (index) => {
@@ -60,8 +59,20 @@ export default function EquipeSection({ equipes, onChange }) {
     }));
   };
 
+  const handleEletricistaSelect = (eletricista) => {
+    if (!eletricista) return;
+    const added = adicionarEletricista(eletricista);
+    setEletricistaSelectValue(eletricista);
+    setTimeout(() => setEletricistaSelectValue(''), 0);
+    return added;
+  };
   const adicionarEquipe = () => {
-    if (novaEquipe.codigo_equipe && novaEquipe.supervisor && novaEquipe.encarregado && novaEquipe.eletricistas.length > 0) {
+    if (
+      novaEquipe.codigo_equipe &&
+      novaEquipe.supervisor &&
+      novaEquipe.encarregado &&
+      novaEquipe.eletricistas.length >= 2
+    ) {
       onChange([...(equipes || []), { ...novaEquipe, id: Date.now() }]);
       setNovaEquipe({
         codigo_equipe: '',
@@ -70,8 +81,9 @@ export default function EquipeSection({ equipes, onChange }) {
         motorista: '',
         eletricistas: []
       });
+      setEletricistaSelectValue('');
     } else {
-      alert("Código da equipe, supervisor, encarregado e ao menos um eletricista são obrigatórios.");
+      alert("Código da equipe, supervisor, encarregado e ao menos dois eletricistas são obrigatórios.");
     }
   };
 
@@ -97,6 +109,7 @@ export default function EquipeSection({ equipes, onChange }) {
   const supervisorWhere = buildFilters('%SUPERVISOR%');
   const encarregadoWhere = buildFilters('%ENCARREGADO%');
   const motoristaWhere = buildFilters('%MOTORISTA%');
+  const eletricistaWhere = buildFilters('%ELETRICISTA%');
 
   // Excluir colaboradores já escolhidos nesta folha
   const usados = new Set();
@@ -111,57 +124,6 @@ export default function EquipeSection({ equipes, onChange }) {
   if (novaEquipe.motorista) usados.add(String(novaEquipe.motorista.split(' - ')[0]));
   (novaEquipe.eletricistas || []).forEach(e => usados.add(String(e.split(' - ')[0])));
   const excludeProp = { column: 'matricula_ceneged', values: Array.from(usados) };
-
-  useEffect(() => {
-    let isActive = true;
-
-    const carregarEletricistas = async () => {
-      if (!isCodigoSelecionado) {
-        setEletricistasDisponiveis([]);
-        return;
-      }
-
-      try {
-        let baseQuery = supabase
-          .from('cen_colaboradores')
-          .select('matricula_ceneged, nome, funcao, descricao_departamento')
-          .ilike('funcao', '%ELETRICISTA%');
-
-        if (isLinhaViva && deptSingleFilter) {
-          baseQuery = baseQuery.ilike('descricao_departamento', deptSingleFilter.value);
-        } else if (!isLinhaViva && deptOrFilterString) {
-          baseQuery = baseQuery.or(deptOrFilterString);
-        }
-
-        const { data, error } = await baseQuery.order('nome', { ascending: true });
-        if (error) throw error;
-
-        if (isActive) {
-          setEletricistasDisponiveis(data || []);
-        }
-      } catch (err) {
-        console.error('Erro ao carregar eletricistas disponíveis:', err);
-        if (isActive) {
-          setEletricistasDisponiveis([]);
-        }
-      }
-    };
-
-    carregarEletricistas();
-
-    return () => {
-      isActive = false;
-    };
-  }, [isCodigoSelecionado, isLinhaViva, deptOrFilterString]);
-
-  const eletricistasLivres = useMemo(() => {
-    if (!Array.isArray(eletricistasDisponiveis)) return [];
-    const selecionados = new Set(novaEquipe.eletricistas);
-    return eletricistasDisponiveis.filter((row) => {
-      const valor = getColaboradorValue(row);
-      return !selecionados.has(valor);
-    });
-  }, [eletricistasDisponiveis, novaEquipe.eletricistas, getColaboradorValue]);
 
   return (
     <div className="space-y-2">
@@ -264,38 +226,35 @@ export default function EquipeSection({ equipes, onChange }) {
 
           {/* Eletricistas */}
           <div className="space-y-2">
-            <Label className="text-sm font-semibold text-slate-700">
-              Eletricistas da Equipe *
-            </Label>
-            <div className="flex gap-3">
-              <Select
-                onValueChange={(val) => {
-                  if (val === EMPTY_ELETRICISTA_OPTION) return;
-                  adicionarEletricista(val);
-                }}
-                disabled={!isCodigoSelecionado || eletricistasLivres.length === 0}
-              >
-                <SelectTrigger className={`w-full ${!isCodigoSelecionado ? "opacity-50 cursor-not-allowed" : ""}`}>
-                  <SelectValue placeholder={isCodigoSelecionado ? "Selecionar eletricista" : "Selecione um código primeiro"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {eletricistasLivres.length === 0 ? (
-                    <SelectItem value={EMPTY_ELETRICISTA_OPTION} disabled>
-                      Nenhum eletricista disponível
-                    </SelectItem>
-                  ) : (
-                    eletricistasLivres.map((row) => {
-                      const value = getColaboradorValue(row);
-                      return (
-                        <SelectItem key={value} value={value}>
-                          {value}
-                        </SelectItem>
-                      );
-                    })
-                  )}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-semibold text-slate-700">
+                Eletricistas da Equipe *
+              </Label>
+              <span className="text-sm text-slate-500">
+                {novaEquipe.eletricistas.length}/4 eletricistas selecionados
+              </span>
             </div>
+            <SearchableSelect
+              id="eletricistas"
+              tableName="cen_colaboradores"
+              columnName="nome"
+              selectColumns="matricula_ceneged, nome, funcao, descricao_departamento"
+              where={eletricistaWhere}
+              orFilter={deptOrFilterString}
+              exclude={excludeProp}
+              placeholder={isCodigoSelecionado ? "Pesquisar eletricista..." : "Selecione um código primeiro"}
+              value={eletricistaSelectValue}
+              onValueChange={handleEletricistaSelect}
+              getLabel={getColaboradorLabel}
+              getValue={getColaboradorValue}
+              disabled={!isCodigoSelecionado || novaEquipe.eletricistas.length >= 4}
+              className={`${(!isCodigoSelecionado || novaEquipe.eletricistas.length >= 4) ? "opacity-50 cursor-not-allowed" : ""}`}
+            />
+            {novaEquipe.eletricistas.length < 2 && (
+              <p className="text-sm text-amber-600">
+                Selecione pelo menos 2 eletricistas.
+              </p>
+            )}
 
             {novaEquipe.eletricistas.length > 0 && (
               <div className="space-y-2 pt-2">
@@ -316,7 +275,7 @@ export default function EquipeSection({ equipes, onChange }) {
           <div className="pt-6 w-full">
             <Button 
               onClick={adicionarEquipe} 
-              disabled={!novaEquipe.codigo_equipe || !novaEquipe.supervisor || !novaEquipe.encarregado || novaEquipe.eletricistas.length === 0} 
+              disabled={!novaEquipe.codigo_equipe || !novaEquipe.supervisor || !novaEquipe.encarregado || novaEquipe.eletricistas.length < 2} 
               className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold"
             >
               <Plus className="w-4 h-4 mr-2" />

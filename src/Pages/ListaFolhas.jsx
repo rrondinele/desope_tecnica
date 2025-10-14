@@ -124,7 +124,6 @@ const obterStatusAnteriorCancelamento = (folha) => {
       return entrada.status;
     }
   }
-
   return "pendente";
 };
 

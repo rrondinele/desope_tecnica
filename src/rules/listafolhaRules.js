@@ -1,4 +1,4 @@
-ï»¿import { format, differenceInBusinessDays } from "date-fns";
+import { format, differenceInBusinessDays } from "date-fns";
 import { FolhaMedicao } from "@/entities/FolhaMedicao";
 import { addBusinessDays, parseLocalDate } from "@/utils/listafolhaUtils";
 
@@ -6,7 +6,7 @@ export const validarEnvioFolha = (envioData) => {
   if (!envioData?.metodo_envio) {
     return {
       ok: false,
-      message: "Por favor, selecione o mÃ©todo de envio.",
+      message: "Por favor, selecione o método de envio.",
     };
   }
 
@@ -34,7 +34,7 @@ export const getPrazoStatus = (folha) => {
 
 export const updateStatus = async (folha, novoStatus, extraData = {}, profile = null) => {
   if (!folha?.id) {
-    throw new Error("Folha invÃ¡lida para atualizaÃ§Ã£o de status");
+    throw new Error("Folha inválida para atualização de status");
   }
 
   const historicoAnterior = Array.isArray(folha.status_historico)
@@ -63,7 +63,7 @@ export const updateStatus = async (folha, novoStatus, extraData = {}, profile = 
 
 export const processarRetorno = async ({ folha, retornoData, profile }) => {
   if (!folha?.id) {
-    throw new Error("Folha invÃ¡lida para processamento de retorno");
+    throw new Error("Folha inválida para processamento de retorno");
   }
   const usuario = profile?.full_name || profile?.email || "sistema";
 
@@ -104,10 +104,10 @@ export const processarRetorno = async ({ folha, retornoData, profile }) => {
       )}: ${retornoData.tipo_motivo_reprovacao} - ${retornoData.motivo_reprovacao}`,
     },
     {
-      status: "pendente",
+      status: "rascunho",
       data: new Date().toISOString(),
       usuario: usuario,
-      observacoes: `Folha de correÃ§Ã£o criada automaticamente apÃ³s reprovaÃ§Ã£o da ${folha.numero_fm}`,
+      observacoes: `Folha de correção criada automaticamente após reprovação da ${folha.numero_fm}`,
     },
   ];
 
@@ -120,7 +120,7 @@ export const processarRetorno = async ({ folha, retornoData, profile }) => {
   const novaFolhaData = {
     ...folha,
     numero_fm: novoNumeroFM,
-    status: "pendente",
+    status: "rascunho",
     versao: novaVersao,
     folha_original_id: folha.folha_original_id || folha.id,
     eh_correcao: true,

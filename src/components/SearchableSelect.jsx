@@ -6,13 +6,17 @@ export default function SearchableSelect({
   columnName,
   placeholder = 'Pesquisar…',
   onValueChange,
+  onInputChange,
   selectColumns,
   value: controlledValue,
   className = '',
+  inputClassName = '',
   id,
   required,
   disabled,
   selectionOnly = true,
+  searchColumn,
+  searchOperator = 'ilike',
   getLabel,
   getValue,
   // 🔽 NOVO
@@ -28,6 +32,7 @@ export default function SearchableSelect({
   const containerRef = useRef(null)
 
   const cols = selectColumns || (columnName === 'tecnico' ? 'tecnico,matricula_light' : columnName)
+  const effectiveSearchColumn = searchColumn || columnName
 
   useEffect(() => {
     setQuery(controlledValue || '')
@@ -53,7 +58,20 @@ export default function SearchableSelect({
           : query
 
       if (searchTerm) {
-        q = q.ilike(columnName, `%${searchTerm}%`)
+        const op = (searchOperator || 'ilike').toLowerCase()
+        const pattern = `%${searchTerm}%`
+        if (op === 'ilike') {
+          if (effectiveSearchColumn === columnName) q = q.ilike(columnName, pattern)
+          else q = q.filter(effectiveSearchColumn, 'ilike', pattern)
+        } else if (op === 'like') {
+          if (effectiveSearchColumn === columnName) q = q.like(columnName, pattern)
+          else q = q.filter(effectiveSearchColumn, 'like', pattern)
+        } else if (op === 'eq') {
+          if (effectiveSearchColumn === columnName) q = q.eq(columnName, searchTerm)
+          else q = q.filter(effectiveSearchColumn, 'eq', searchTerm)
+        } else {
+          q = q.filter(effectiveSearchColumn, op, searchTerm)
+        }
       }
 
       // 🔽 aplica filtros AND vindos do pai
@@ -96,6 +114,8 @@ export default function SearchableSelect({
     cols,
     maxRows,
     query,
+    effectiveSearchColumn,
+    searchOperator,
     JSON.stringify(where || []),
     orFilter
   ])
@@ -151,15 +171,25 @@ export default function SearchableSelect({
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       <input
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className={`w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${inputClassName}`.trim()}
         placeholder={placeholder}
         value={query}
         id={id}
         required={required}
         disabled={disabled}
         onFocus={() => setOpen(true)}
-        onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
-        onBlur={() => { if (selectionOnly && query !== selectedLabel) setQuery(selectedLabel || '') }}
+        onChange={(e) => {
+          const nextValue = e.target.value
+          setQuery(nextValue)
+          setOpen(true)
+          if (!selectionOnly) {
+            setSelectedLabel(nextValue)
+            onInputChange && onInputChange(nextValue)
+          }
+        }}
+        onBlur={() => {
+          if (selectionOnly && query !== selectedLabel) setQuery(selectedLabel || '')
+        }}
       />
       {open && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-white shadow-lg">
