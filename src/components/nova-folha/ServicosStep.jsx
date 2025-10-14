@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -109,8 +109,8 @@ export default function ServicosStep({ data, updateData }) {
         codigo_mestre: '',
         descricao: '',
         descricao_exibicao: '',
-        unidade: '', 
-        valor_unitario: 0, 
+        unidade: '',
+        valor_unitario: 0,
         quantidade: novoServico.quantidade // Mantém a quantidade para próximo serviço
       });
     }
@@ -143,6 +143,7 @@ export default function ServicosStep({ data, updateData }) {
                 getValue={(row) => row ? `${row.codigo_mestre} - ${row.descricao_item}` : ''}
                 exclude={{ column: 'codigo_mestre', values: servicosSelecionados }}
                 className="w-full"
+                searchColumns={['descricao_item','codigo_mestre']}
               />
             </div>            
             <div className="space-y-2 order-2">

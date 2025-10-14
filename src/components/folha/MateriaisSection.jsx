@@ -107,7 +107,7 @@ const MaterialForm = ({ onAdd }) => {
             }
             selectionOnly={false}
             inputClassName="border-slate-300"
-            searchColumn="codigo_material::text"
+            searchColumns={['codigo_material', 'texto_breve_material']}
             maxRows={100}
           />
         </div>

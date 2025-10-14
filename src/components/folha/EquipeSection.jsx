@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Users, X } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Importe o Select
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SearchableSelect from "@/components/SearchableSelect";
 
 // Lista de códigos de equipe
@@ -13,15 +13,6 @@ const codigosEquipe = [
   "MT001", "MT002", "MT003", "MT004", "MT005",
   "LV001", "LV002"
 ];
-
-function deptoFromCodigo(cod) {
-  if (!cod) return null;
-  const p = cod.slice(0, 2).toUpperCase();
-  if (p === 'EX') return 'EXPANSÃO';
-  if (p === 'MT') return 'MANUTENÇÃO';
-  if (p === 'LV') return 'LINHA VIVA';
-  return null;
-}
 
 export default function EquipeSection({ equipes, onChange }) {
   const [novaEquipe, setNovaEquipe] = useState({
@@ -66,6 +57,7 @@ export default function EquipeSection({ equipes, onChange }) {
     setTimeout(() => setEletricistaSelectValue(''), 0);
     return added;
   };
+
   const adicionarEquipe = () => {
     if (
       novaEquipe.codigo_equipe &&
@@ -94,15 +86,22 @@ export default function EquipeSection({ equipes, onChange }) {
   // Funções para formatar o label e o valor para o SearchableSelect
   const getColaboradorLabel = (row) => row ? `${row.matricula_ceneged} - ${row.nome}` : '';
   const getColaboradorValue = (row) => row ? `${row.matricula_ceneged} - ${row.nome}` : '';
+
   // Filtros derivados do código da equipe
   const prefix = novaEquipe.codigo_equipe ? novaEquipe.codigo_equipe.slice(0, 2).toUpperCase() : '';
   const isLinhaViva = prefix === 'LV';
-  const deptOrFilterString = isCodigoSelecionado && !isLinhaViva ? 'descricao_departamento.ilike.%EXPANSÃO%,descricao_departamento.ilike.%MANUTENÇÃO%' : null;
-  const deptSingleFilter = isCodigoSelecionado && isLinhaViva ? { column: 'descricao_departamento', operator: 'ilike', value: '%LINHA VIVA%' } : null;
-
+  
   const buildFilters = (funcPattern) => {
     const filters = [{ column: 'funcao', operator: 'ilike', value: funcPattern }];
-    if (deptSingleFilter) filters.push(deptSingleFilter);
+    
+    // Adiciona filtro de departamento baseado no código
+    if (isCodigoSelecionado) {
+      if (isLinhaViva) {
+        filters.push({ column: 'descricao_departamento', operator: 'ilike', value: '%LINHA VIVA%' });
+      }
+      // Para EX e MT, não precisa filtrar departamento pois aceita ambos
+    }
+    
     return filters;
   };
 
@@ -167,7 +166,6 @@ export default function EquipeSection({ equipes, onChange }) {
                 columnName="nome"
                 selectColumns="matricula_ceneged, nome, funcao, descricao_departamento"
                 where={supervisorWhere}
-                orFilter={deptOrFilterString}
                 exclude={excludeProp}
                 placeholder="Pesquisar supervisor..."
                 value={novaEquipe.supervisor}
@@ -176,6 +174,7 @@ export default function EquipeSection({ equipes, onChange }) {
                 getValue={getColaboradorValue}
                 disabled={!isCodigoSelecionado}
                 className={!isCodigoSelecionado ? "opacity-50 cursor-not-allowed" : ""}
+                searchColumns={['nome','matricula_ceneged']}
               />
             </div>
 
@@ -189,15 +188,15 @@ export default function EquipeSection({ equipes, onChange }) {
                 columnName="nome"
                 selectColumns="matricula_ceneged, nome, funcao, descricao_departamento"
                 where={encarregadoWhere}
-                orFilter={deptOrFilterString}
                 exclude={excludeProp}
                 placeholder="Pesquisar encarregado..."
                 value={novaEquipe.encarregado}
                 onValueChange={(val) => setNovaEquipe(prev => ({ ...prev, encarregado: val }))}
                 getLabel={getColaboradorLabel}
                 getValue={getColaboradorValue}
-                disabled={!isCodigoSelecionado} // 🔒 Desabilita se não tiver código
+                disabled={!isCodigoSelecionado}
                 className={!isCodigoSelecionado ? "opacity-50 cursor-not-allowed" : ""}
+                searchColumns={['nome','matricula_ceneged']}
               />
             </div>
 
@@ -211,15 +210,15 @@ export default function EquipeSection({ equipes, onChange }) {
                 columnName="nome"
                 selectColumns="matricula_ceneged, nome, funcao, descricao_departamento"
                 where={motoristaWhere}
-                orFilter={deptOrFilterString}
                 exclude={excludeProp}
                 placeholder="Pesquisar motorista..."
                 value={novaEquipe.motorista}
                 onValueChange={(val) => setNovaEquipe(prev => ({ ...prev, motorista: val }))}
                 getLabel={getColaboradorLabel}
                 getValue={getColaboradorValue}
-                disabled={!isCodigoSelecionado} 
+                disabled={!isCodigoSelecionado}
                 className={!isCodigoSelecionado ? "opacity-50 cursor-not-allowed" : ""}
+                searchColumns={['nome','matricula_ceneged']}
               />
             </div>
           </div>
@@ -240,7 +239,6 @@ export default function EquipeSection({ equipes, onChange }) {
               columnName="nome"
               selectColumns="matricula_ceneged, nome, funcao, descricao_departamento"
               where={eletricistaWhere}
-              orFilter={deptOrFilterString}
               exclude={excludeProp}
               placeholder={isCodigoSelecionado ? "Pesquisar eletricista..." : "Selecione um código primeiro"}
               value={eletricistaSelectValue}
@@ -249,6 +247,7 @@ export default function EquipeSection({ equipes, onChange }) {
               getValue={getColaboradorValue}
               disabled={!isCodigoSelecionado || novaEquipe.eletricistas.length >= 4}
               className={`${(!isCodigoSelecionado || novaEquipe.eletricistas.length >= 4) ? "opacity-50 cursor-not-allowed" : ""}`}
+              searchColumns={['nome','matricula_ceneged']}
             />
             {novaEquipe.eletricistas.length < 2 && (
               <p className="text-sm text-amber-600">
@@ -275,7 +274,7 @@ export default function EquipeSection({ equipes, onChange }) {
           <div className="pt-6 w-full">
             <Button 
               onClick={adicionarEquipe} 
-              disabled={!novaEquipe.codigo_equipe || !novaEquipe.supervisor || !novaEquipe.encarregado || novaEquipe.eletricistas.length < 2} 
+              disabled={!novaEquipe.codigo_equipe || !novaEquipe.supervisor || !novaEquipe.encarregado || !novaEquipe.motorista || novaEquipe.eletricistas.length < 2} 
               className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -285,7 +284,7 @@ export default function EquipeSection({ equipes, onChange }) {
         </CardContent>
       </Card>
 
-      {/* O restante do componente (Lista de Equipes Adicionadas) permanece o mesmo */}
+      {/* Lista de Equipes Adicionadas */}
       <Card className="border-slate-200 shadow-sm">
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">

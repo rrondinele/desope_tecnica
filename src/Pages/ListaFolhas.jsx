@@ -134,19 +134,21 @@ const obterStatusAnteriorCancelamento = (folha) => {
 };
 
 // Componente KanbanCard
-const KanbanCard = React.memo(({ folha, index, onActionClick, prazoInfo }) => {
+const KanbanCard = React.memo(({ folha, index, onActionClick, prazoInfo, isDraggable = false }) => {
   const StatusIcon = STATUS_CONFIG[folha.status]?.icon;
   
   return (
-    <Draggable draggableId={folha.id} index={index}>
+    <Draggable draggableId={folha.id} index={index} isDragDisabled={!isDraggable}>
       {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
           {...provided.draggableProps}
-          {...provided.dragHandleProps}
+          {...(isDraggable ? provided.dragHandleProps : {})}
           className={`p-3 bg-white rounded-lg shadow-sm border mb-3 ${
             snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-500' : ''
-          } hover:shadow-md transition-shadow duration-200`}
+          } hover:shadow-md transition-shadow duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-default select-text'
+          }`}
         >
           <div className="flex justify-between items-start">
             <span className="font-mono font-semibold text-sm text-gray-800">{folha.numero_fm}</span>
@@ -233,6 +235,7 @@ const ListaFolhas = () => {
 
   const canValidate = useMemo(() => profile?.role === 'supervisor', [profile]);
   const isBackoffice = useMemo(() => profile?.role === 'backoffice', [profile]);
+  const isAdmin = useMemo(() => profile?.role === 'admin', [profile]);
 
   const loadFolhas = useCallback(async () => {
     setIsLoading(true);
@@ -668,28 +671,32 @@ const ListaFolhas = () => {
     URL.revokeObjectURL(url);
   };
 
-  // Função para drag and drop no Kanban
+  // Fun��o para drag and drop no Kanban
   const onDragEnd = async (result) => {
+    if (!isAdmin) return;
+
     const { source, destination, draggableId } = result;
 
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
-    
-    const folha = folhas.find(f => f.id === draggableId);
+
+    const folha = folhas.find((f) => f.id === draggableId);
     const novoStatus = destination.droppableId;
     const statusPermitidos = Object.keys(STATUS_CONFIG);
 
-    if (folha && statusPermitidos.includes(novoStatus) && folha.status !== novoStatus) {
-        let extraData = {};
-        extraData.observacoes = `Status alterado via Kanban para ${STATUS_CONFIG[novoStatus].label}`;
+    if (!folha || !statusPermitidos.includes(novoStatus) || folha.status === novoStatus) return;
 
-        try {
-          await updateStatus(folha, novoStatus, extraData, profile);
-          await loadFolhas();
-        } catch (error) {
-          console.error("Erro ao atualizar status via Kanban:", error);
-          alert("Não foi possível atualizar o status. Tente novamente.");
-        }
+    const extraData = {
+      observacoes: `Status alterado via Kanban para ${STATUS_CONFIG[novoStatus].label}`,
+    };
+
+    try {
+      await updateStatus(folha, novoStatus, extraData, profile);
+      await loadFolhas();
+    } catch (error) {
+      console.error("Erro ao atualizar status via Kanban:", error);
+      alert("N�o foi poss�vel atualizar o status. Tente novamente.");
+      await loadFolhas();
     }
   };
 
@@ -946,35 +953,40 @@ const ListaFolhas = () => {
           </>
         ) : (
           <DragDropContext onDragEnd={onDragEnd}>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-start">
-              {kanbanColumns.map(column => (
-                <Droppable key={column.id} droppableId={column.id}>
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className={`p-3 rounded-lg flex-1 ${snapshot.isDraggingOver ? 'bg-blue-50' : 'bg-gray-100'} min-h-[150px]`}
-                    >
-                      <h3 className="font-semibold text-sm mb-3 px-1">{column.title} ({column.folhas.length})</h3>
-                      <div className="max-h-[70vh] overflow-y-auto">
-                        {column.folhas.map((folha, index) => {
-                          const prazoInfo = getPrazoInfo(folha);
-                          return (
-                            <KanbanCard
-                              key={folha.id}
-                              folha={folha}
-                              index={index}
-                              onActionClick={handleActionClick}
-                              prazoInfo={prazoInfo}
-                            />
-                          );
-                        })}
-                        {provided.placeholder}
+            <div className="overflow-x-auto">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-start min-w-[640px] pr-2">
+                {kanbanColumns.map(column => (
+                  <Droppable key={column.id} droppableId={column.id}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`p-3 rounded-lg flex-1 ${snapshot.isDraggingOver ? 'bg-blue-50' : 'bg-gray-100'} min-h-[150px]`}
+                      >
+                        <h3 className="font-semibold text-sm mb-3 px-1">
+                          {column.title} ({column.folhas.length})
+                        </h3>
+                        <div className="max-h-[70vh] overflow-y-auto">
+                          {column.folhas.map((folha, index) => {
+                            const prazoInfo = getPrazoInfo(folha);
+                            return (
+                              <KanbanCard
+                                key={folha.id}
+                                folha={folha}
+                                index={index}
+                                onActionClick={handleActionClick}
+                                prazoInfo={prazoInfo}
+                                isDraggable={isAdmin}
+                              />
+                            );
+                          })}
+                          {provided.placeholder}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </Droppable>
-              ))}
+                    )}
+                  </Droppable>
+                ))}
+              </div>
             </div>
           </DragDropContext>
         )}

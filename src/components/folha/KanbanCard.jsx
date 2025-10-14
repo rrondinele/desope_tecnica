@@ -8,19 +8,21 @@ import { Eye } from "lucide-react";
 import { STATUS_CONFIG } from "@/config/listafolhaConfig";
 import { formatCurrency } from "@/utils/listafolhaUtils";
 
-export const KanbanCard = React.memo(({ folha, index, onActionClick, prazoInfo }) => {
+export const KanbanCard = React.memo(({ folha, index, onActionClick, prazoInfo, isDraggable = false }) => {
   const StatusIcon = STATUS_CONFIG[folha.status]?.icon;
   
   return (
-    <Draggable draggableId={folha.id} index={index}>
+    <Draggable draggableId={folha.id} index={index} isDragDisabled={!isDraggable}>
       {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
           {...provided.draggableProps}
-          {...provided.dragHandleProps}
+          {...(isDraggable ? provided.dragHandleProps : {})}
           className={`p-3 bg-white rounded-lg shadow-sm border mb-3 ${
             snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-500' : ''
-          } hover:shadow-md transition-shadow duration-200`}
+          } hover:shadow-md transition-shadow duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-default select-text'
+          }`}
         >
           <div className="flex justify-between items-start">
             <span className="font-mono font-semibold text-sm text-gray-800">{folha.numero_fm}</span>
