@@ -8,7 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Files, Mail, Share, AlertOctagon, AlertTriangle, Clock, ShieldCheck, CheckCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { 
+  Files, Mail, Share, AlertOctagon, AlertTriangle, Clock, ShieldCheck, CheckCircle, 
+  LayoutGrid, List, FileDown, Eye, Edit, Send, DollarSign, XCircle, LogOut 
+} from "lucide-react";
 import { format, differenceInBusinessDays } from "date-fns";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -27,6 +32,7 @@ import { updateStatus, processarRetorno, getPrazoStatus, validarEnvioFolha } fro
 import { ListaFolhaActions, ListaPagination, ListaStatusBadge, ListaHistoricoTimeline } from "@/components/folha";
 import { addBusinessDays, parseLocalDate, formatCurrency, escapeCsvValue } from "@/utils/listafolhaUtils";
 import { useAuth } from "@/context/AuthProvider";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import "@/styles/ListaFolhas.css";
 
 const getPrazoInfo = (folha) => {
@@ -44,14 +50,14 @@ const getPrazoInfo = (folha) => {
   const diasRestantes = differenceInBusinessDays(dueDate, hoje);
 
   if (diasRestantes < 0) {
-    return { className: "bg-red-500", icon: AlertOctagon, text: "Atrasado" };
+    return { className: "text-red-500", icon: AlertOctagon, text: "Atrasado" };
   }
   if (diasRestantes === 0) {
-    return { className: "bg-orange-100", icon: AlertTriangle, text: "Vence Hoje" };
+    return { className: "text-orange-500", icon: AlertTriangle, text: "Vence Hoje" };
   }
 
   return {
-    className: diasRestantes === 1 ? "bg-yellow-100" : "bg-blue-100",
+    className: diasRestantes === 1 ? "text-yellow-500" : "text-blue-500",
     icon: Clock,
     text: diasRestantes === 1 ? "Falta 1 dia" : `Faltam ${diasRestantes} dias`,
   };
@@ -127,6 +133,63 @@ const obterStatusAnteriorCancelamento = (folha) => {
   return "pendente";
 };
 
+// Componente KanbanCard
+const KanbanCard = React.memo(({ folha, index, onActionClick, prazoInfo }) => {
+  const StatusIcon = STATUS_CONFIG[folha.status]?.icon;
+  
+  return (
+    <Draggable draggableId={folha.id} index={index}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          className={`p-3 bg-white rounded-lg shadow-sm border mb-3 ${
+            snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-500' : ''
+          } hover:shadow-md transition-shadow duration-200`}
+        >
+          <div className="flex justify-between items-start">
+            <span className="font-mono font-semibold text-sm text-gray-800">{folha.numero_fm}</span>
+            <Badge variant="secondary" className={`${STATUS_CONFIG[folha.status]?.color} font-medium text-xs`}>
+              {StatusIcon && <StatusIcon className="w-3 h-3 mr-1" />}
+              {STATUS_CONFIG[folha.status]?.label}
+            </Badge>
+          </div>
+          <p className="text-sm text-gray-600 mt-1 line-clamp-2">{folha.projeto}</p>
+          <div className="text-xs text-gray-500 mt-1">{folha.municipio}</div>
+          <div className="flex justify-between items-end mt-2">
+            <div className="text-sm font-semibold text-green-600">
+              {formatCurrency(folha.valor_total)}
+            </div>
+            <div className="flex gap-1 items-center">
+              {prazoInfo && prazoInfo.icon && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <prazoInfo.icon className={`w-4 h-4 ${prazoInfo.className}`} />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{prazoInfo.text}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="w-6 h-6 hover:bg-blue-50 transition-colors"
+                onClick={() => onActionClick(folha, 'details')}
+              >
+                <Eye className="w-4 h-4 text-blue-600" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Draggable>
+  );
+});
+
 const ListaFolhas = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -140,6 +203,7 @@ const ListaFolhas = () => {
   const [exportingFolhaId, setExportingFolhaId] = useState(null);
   const [pendingExportFolha, setPendingExportFolha] = useState(null);
   const [exportError, setExportError] = useState(null);
+  const [viewMode, setViewMode] = useState("list");
 
   const [selectedFolha, setSelectedFolha] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -603,53 +667,110 @@ const ListaFolhas = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
+
+  // Função para drag and drop no Kanban
+  const onDragEnd = async (result) => {
+    const { source, destination, draggableId } = result;
+
+    if (!destination) return;
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+    
+    const folha = folhas.find(f => f.id === draggableId);
+    const novoStatus = destination.droppableId;
+    const statusPermitidos = Object.keys(STATUS_CONFIG);
+
+    if (folha && statusPermitidos.includes(novoStatus) && folha.status !== novoStatus) {
+        let extraData = {};
+        extraData.observacoes = `Status alterado via Kanban para ${STATUS_CONFIG[novoStatus].label}`;
+
+        try {
+          await updateStatus(folha, novoStatus, extraData, profile);
+          await loadFolhas();
+        } catch (error) {
+          console.error("Erro ao atualizar status via Kanban:", error);
+          alert("Não foi possível atualizar o status. Tente novamente.");
+        }
+    }
+  };
+
+  // Colunas do Kanban
+  const kanbanColumns = useMemo(() => {
+    return Object.entries(STATUS_CONFIG).map(([statusKey, { label }]) => ({
+      id: statusKey,
+      title: label,
+      folhas: filteredFolhas.filter(f => f.status === statusKey)
+    }));
+  }, [filteredFolhas]);
+
+  const handleActionClick = (folha, action) => {
+    setSelectedFolha(folha);
+    if (action === 'details') setShowDetailsModal(true);
+    if (action === 'validate') setShowValidacaoModal(true);
+    if (action === 'send') setShowEnvioModal(true);
+    if (action === 'return') setShowRetornoModal(true);
+    if (action === 'payment') setShowPagamentoModal(true);
+    if (action === 'cancel') setShowCancelamentoModal(true);
+  };
+
   return (
-    <div className="lista-folhas-page">
-      <div className="lista-folhas-container">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="lista-folhas-header"
+    <div className="min-h-screen bg-slate-50">
+      <div className="mx-auto w-full max-w-screen-2xl px-4 md:px-8">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.6 }} 
+          className="mb-8 flex justify-between items-center"
         >
-          <h1 className="text-3xl font-bold text-gray-900 md:text-4xl">Lista de Folhas de Medição</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Lista de Folhas de Medição</h1>
+          <div className="flex items-center gap-2">
+            {/* Botões de visualização */}
+            <Button 
+              variant={viewMode === "list" ? "default" : "outline"} 
+              size="icon" 
+              onClick={() => setViewMode("list")}
+              title="Visualizar em Lista"
+            >
+              <List className="w-5 h-5"/>
+            </Button>
+            <Button 
+              variant={viewMode === "kanban" ? "default" : "outline"} 
+              size="icon" 
+              onClick={() => setViewMode("kanban")}
+              title="Visualizar em Kanban"
+            >
+              <LayoutGrid className="w-5 h-5"/>
+            </Button>
+          </div>
         </motion.div>
 
-        <Card className="mb-6 border-0 shadow-lg">
-          <CardContent className="flex flex-col items-stretch gap-3 p-3 md:flex-row md:items-center md:gap-4">
-            <Input
-              placeholder="Buscar por Número FM, Projeto..."
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className="min-w-0 flex-1"
+        <Card className="mb-6 shadow-lg border-0">
+          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+            <Input 
+              placeholder="Buscar por Número FM, Projeto..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="md:col-span-1" 
             />
-
-            <div className="w-full shrink-0 md:w-[420px]">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Todos os Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Status</SelectItem>
-                  {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                    <SelectItem key={key} value={key}>
-                      {config.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="w-full shrink-0 md:w-[420px]">
-              <Button
-                onClick={handleExportToCSV}
-                variant="outline"
-                disabled={filteredFolhas.length === 0}
-                className="w-full"
-              >
-                Exportar para Excel
-              </Button>
-            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrar por Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Status</SelectItem>
+                {Object.entries(STATUS_CONFIG).map(([key, { label }]) => (
+                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button 
+              onClick={handleExportToCSV} 
+              variant="outline" 
+              disabled={filteredFolhas.length === 0}
+              className="hover:bg-gray-50 transition-colors"
+            >
+              <FileDown className="w-4 h-4 mr-2" />
+              Exportar para Excel
+            </Button>
           </CardContent>
         </Card>
 
@@ -659,174 +780,206 @@ const ListaFolhas = () => {
           </div>
         )}
 
-        <Card className="border-0 shadow-lg">
-          <CardContent className="pt-4">
-            <div className="mb-4 flex items-center justify-between px-2">
+        {viewMode === "list" ? (
+          <>
+            <div className="flex items-center justify-between mb-4 px-2">
               <p className="text-sm text-gray-600">
                 {filteredFolhas.length} folha(s) encontrada(s)
                 {searchTerm && ` para "${searchTerm}"`}
               </p>
-              <div className="lista-folhas-summary">
-                <span className="lista-folhas-summary__item">
-                  <span className="lista-folhas-summary__dot bg-yellow-500" />
-                  Pendentes totais: {resumoStatus.pendentes}
-                </span>
-                <span className="lista-folhas-summary__item">
-                  <span className="lista-folhas-summary__dot bg-red-500" />
+              <div className="flex items-center gap-4 text-sm text-gray-700">
+                <span className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                   Atrasadas: {resumoStatus.atrasadas}
                 </span>
-                <span className="lista-folhas-summary__item">
-                  <span className="lista-folhas-summary__dot bg-orange-500" />
+                <span className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                   Vencem Hoje: {resumoStatus.vencemHoje}
                 </span>
               </div>
             </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-64">Número FM</TableHead>
-                  <TableHead className="w-64">Projeto</TableHead>
-                  <TableHead className="w-64">Tipo Processo</TableHead>
-                  <TableHead className="w-64">Município</TableHead>
-                  <TableHead className="w-64">Data Obra</TableHead>
-                  <TableHead className="w-64">Data Envio</TableHead>
-                  <TableHead className="w-64">Data Retorno</TableHead>
-                  <TableHead className="w-80">Status</TableHead>
-                  <TableHead className="w-64">Prazo</TableHead>
-                  <TableHead className="w-64">Criado por</TableHead>
-                  <TableHead className="w-64">Valor</TableHead>
-                  <TableHead className="w-64">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={11} className="py-8 text-center">
-                      Carregando...
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedFolhas.map((folha) => {
-                    const prazoInfo = getPrazoInfo(folha);
-                    const PrazoIcon = prazoInfo.icon;
-                    const isAguardandoCorrecao = folha.status === "aguardando_correcao";
-                    const rowClassName = [
-                      prazoInfo.className,
-                      isAguardandoCorrecao ? "bg-red-100 hover:bg-red-100" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ");
-
-                    return (
-                      <TableRow key={folha.id} className={rowClassName}>
-                        <TableCell className="font-mono font-semibold">{folha.numero_fm}</TableCell>
-                        <TableCell>{folha.projeto}</TableCell>
-                        <TableCell>{folha.tipo_processo}</TableCell>
-                        <TableCell>{folha.municipio}</TableCell>
-                        <TableCell>
-                          {folha.data_obra ? format(parseLocalDate(folha.data_obra), "dd/MM/yy") : "-"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span>
-                              {folha.data_envio ? format(parseLocalDate(folha.data_envio), "dd/MM/yy") : "-"}
-                            </span>
-                            {folha.metodo_envio && (
-                              <span className="flex items-center gap-1 text-xs text-gray-500">
-                                {folha.metodo_envio === "E-mail" ? (
-                                  <Mail className="h-3 w-3" />
-                                ) : (
-                                  <Share className="h-3 w-3" />
-                                )}
-                                {folha.metodo_envio}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {folha.data_retorno_distribuidora
-                            ? format(parseLocalDate(folha.data_retorno_distribuidora), "dd/MM/yy")
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          <ListaStatusBadge status={folha.status} />
-                        </TableCell>
-                        <TableCell>
-                          {PrazoIcon && (
-                            <div className="flex items-center gap-1 text-sm">
-                              <PrazoIcon className="h-4 w-4" />
-                              {prazoInfo.text}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>{profilesMap[folha.created_by_user_id] || folha.created_by_name || "-"}</TableCell>
-                        <TableCell className="text-left font-semibold">
-                          {formatCurrency(folha.valor_total)}
-                        </TableCell>
-                        <TableCell>
-                          <ListaFolhaActions
-                            folha={folha}
-                            canValidate={canValidate}
-                            isBackoffice={isBackoffice}
-                            isExporting={exportingFolhaId === folha.id}
-                            onExport={handleExportToTemplate}
-                            onView={(item) => {
-                              setSelectedFolha(item);
-                              setShowDetailsModal(true);
-                            }}
-                            onValidar={(item) => {
-                              setSelectedFolha(item);
-                              setShowValidacaoModal(true);
-                            }}
-                            onEnviar={(item) => {
-                              setSelectedFolha(item);
-                              setEnvioData({ data_envio: format(new Date(), "yyyy-MM-dd"), metodo_envio: "" });
-                              setShowEnvioModal(true);
-                            }}
-                            onRetorno={(item) => {
-                              setSelectedFolha(item);
-                              setRetornoData({
-                                parecer: "aprovado",
-                                data_retorno: format(new Date(), "yyyy-MM-dd"),
-                                tipo_motivo_reprovacao: "",
-                                motivo_reprovacao: "",
-                              });
-                              setShowRetornoModal(true);
-                            }}
-                            onPagamento={(item) => {
-                              setSelectedFolha(item);
-                              setPagamentoData({ numero_pagamento: "", data_pagamento: "" });
-                              setShowPagamentoModal(true);
-                            }}
-                            onEdit={handleEditarFolha}
-                            onCancelar={(item) => {
-                              setSelectedFolha(item);
-                              setCancelamentoData({
-                                cancelado_por: "",
-                                motivo_cancelamento_tipo: "",
-                                motivo_cancelamento: "",
-                              });
-                              setShowCancelamentoModal(true);
-                            }}
-                            onAutorizarCancelamento={handleAbrirAutorizacaoCancelamento}
-                          />
+            <Card className="shadow-lg border-0">
+              <CardContent className="pt-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-gray-50">
+                      <TableHead className="w-64">Número FM</TableHead>
+                      <TableHead className="w-64">Projeto</TableHead>
+                      <TableHead className="w-64">Tipo Processo</TableHead>
+                      <TableHead className="w-64">Município</TableHead>
+                      <TableHead className="w-64">Data Obra</TableHead>
+                      <TableHead className="w-64">Data Envio</TableHead>
+                      <TableHead className="w-64">Data Retorno</TableHead>
+                      <TableHead className="w-80">Status</TableHead>
+                      <TableHead className="w-64">Prazo</TableHead>
+                      <TableHead className="w-64">Criado por</TableHead>
+                      <TableHead className="w-64">Valor</TableHead>
+                      <TableHead className="w-64">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={12} className="text-center py-8">
+                          Carregando...
                         </TableCell>
                       </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                    ) : (
+                      paginatedFolhas.map((folha) => {
+                        const prazoInfo = getPrazoInfo(folha);
+                        const PrazoIcon = prazoInfo.icon;
+                        const isAguardandoCorrecao = folha.status === "aguardando_correcao";
+                        const rowClassName = [
+                          isAguardandoCorrecao ? "bg-red-50 hover:bg-red-100" : "hover:bg-gray-50",
+                        ].filter(Boolean).join(" ");
 
-            <ListaPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              className="mt-4"
-            />
-          </CardContent>
-        </Card>
+                        return (
+                          <TableRow key={folha.id} className={rowClassName}>
+                            <TableCell className="font-mono font-semibold">{folha.numero_fm}</TableCell>
+                            <TableCell>{folha.projeto}</TableCell>
+                            <TableCell>{folha.tipo_processo}</TableCell>
+                            <TableCell>{folha.municipio}</TableCell>
+                            <TableCell>
+                              {folha.data_obra ? format(parseLocalDate(folha.data_obra), "dd/MM/yy") : "-"}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span>
+                                  {folha.data_envio ? format(parseLocalDate(folha.data_envio), "dd/MM/yy") : "-"}
+                                </span>
+                                {folha.metodo_envio && (
+                                  <span className="flex items-center gap-1 text-xs text-gray-500">
+                                    {folha.metodo_envio === "E-mail" ? (
+                                      <Mail className="h-3 w-3" />
+                                    ) : (
+                                      <Share className="h-3 w-3" />
+                                    )}
+                                    {folha.metodo_envio}
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {folha.data_retorno_distribuidora
+                                ? format(parseLocalDate(folha.data_retorno_distribuidora), "dd/MM/yy")
+                                : "-"}
+                            </TableCell>
+                            <TableCell>
+                              <ListaStatusBadge status={folha.status} />
+                            </TableCell>
+                            <TableCell>
+                              {PrazoIcon && (
+                                <div className="flex items-center gap-1 text-sm">
+                                  <PrazoIcon className={`h-4 w-4 ${prazoInfo.className}`} />
+                                  {prazoInfo.text}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>{profilesMap[folha.created_by_user_id] || folha.created_by_name || "-"}</TableCell>
+                            <TableCell className="text-left font-semibold text-green-600">
+                              {formatCurrency(folha.valor_total)}
+                            </TableCell>
+                            <TableCell>
+                              <ListaFolhaActions
+                                folha={folha}
+                                canValidate={canValidate}
+                                isBackoffice={isBackoffice}
+                                isExporting={exportingFolhaId === folha.id}
+                                onExport={handleExportToTemplate}
+                                onView={(item) => {
+                                  setSelectedFolha(item);
+                                  setShowDetailsModal(true);
+                                }}
+                                onValidar={(item) => {
+                                  setSelectedFolha(item);
+                                  setShowValidacaoModal(true);
+                                }}
+                                onEnviar={(item) => {
+                                  setSelectedFolha(item);
+                                  setEnvioData({ data_envio: format(new Date(), "yyyy-MM-dd"), metodo_envio: "" });
+                                  setShowEnvioModal(true);
+                                }}
+                                onRetorno={(item) => {
+                                  setSelectedFolha(item);
+                                  setRetornoData({
+                                    parecer: "aprovado",
+                                    data_retorno: format(new Date(), "yyyy-MM-dd"),
+                                    tipo_motivo_reprovacao: "",
+                                    motivo_reprovacao: "",
+                                  });
+                                  setShowRetornoModal(true);
+                                }}
+                                onPagamento={(item) => {
+                                  setSelectedFolha(item);
+                                  setPagamentoData({ numero_pagamento: "", data_pagamento: "" });
+                                  setShowPagamentoModal(true);
+                                }}
+                                onEdit={handleEditarFolha}
+                                onCancelar={(item) => {
+                                  setSelectedFolha(item);
+                                  setCancelamentoData({
+                                    cancelado_por: "",
+                                    motivo_cancelamento_tipo: "",
+                                    motivo_cancelamento: "",
+                                  });
+                                  setShowCancelamentoModal(true);
+                                }}
+                                onAutorizarCancelamento={handleAbrirAutorizacaoCancelamento}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+
+                <ListaPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  className="mt-4"
+                />
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <DragDropContext onDragEnd={onDragEnd}>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-start">
+              {kanbanColumns.map(column => (
+                <Droppable key={column.id} droppableId={column.id}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`p-3 rounded-lg flex-1 ${snapshot.isDraggingOver ? 'bg-blue-50' : 'bg-gray-100'} min-h-[150px]`}
+                    >
+                      <h3 className="font-semibold text-sm mb-3 px-1">{column.title} ({column.folhas.length})</h3>
+                      <div className="max-h-[70vh] overflow-y-auto">
+                        {column.folhas.map((folha, index) => {
+                          const prazoInfo = getPrazoInfo(folha);
+                          return (
+                            <KanbanCard
+                              key={folha.id}
+                              folha={folha}
+                              index={index}
+                              onActionClick={handleActionClick}
+                              prazoInfo={prazoInfo}
+                            />
+                          );
+                        })}
+                        {provided.placeholder}
+                      </div>
+                    </div>
+                  )}
+                </Droppable>
+              ))}
+            </div>
+          </DragDropContext>
+        )}
+
+        {/* Modais existentes (mantenha todos os modais existentes abaixo) */}
         <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
           <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
             <DialogHeader>
@@ -942,6 +1095,9 @@ const ListaFolhas = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Mantenha todos os outros modais existentes (showAutorizacaoCancelamentoModal, showEnvioModal, showRetornoModal, showPagamentoModal, showCancelamentoModal, showValidacaoModal, showNaoValidacaoModal) */}
+        {/* ... (código dos modais existentes permanece igual) */}
+
         <Dialog
           open={showAutorizacaoCancelamentoModal}
           onOpenChange={(open) => {
@@ -992,6 +1148,7 @@ const ListaFolhas = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
         <Dialog open={showEnvioModal} onOpenChange={setShowEnvioModal}>
           <DialogContent className="max-w-md sm:max-w-lg">
             <DialogHeader>

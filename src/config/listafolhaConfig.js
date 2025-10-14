@@ -1,4 +1,4 @@
-import { Edit, Clock, Send, CheckCircle, AlertTriangle, DollarSign, XCircle } from "lucide-react";
+import { Edit, Clock, Send, CheckCircle, AlertTriangle, DollarSign, XCircle, LayoutGrid, List } from "lucide-react";
 
 export const STATUS_CONFIG = {
   rascunho: { 
@@ -89,3 +89,9 @@ export const MOTIVO_REPROVACAO_TIPOS = [
 ];
 
 export const EXPORT_FILE_NAME = "folhas_de_medicao.csv";
+
+// Novas constantes para o modo de visualização
+export const VIEW_MODES = {
+  LIST: "list",
+  KANBAN: "kanban",
+};
