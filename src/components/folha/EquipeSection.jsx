@@ -230,7 +230,7 @@ export default function EquipeSection({ equipes, onChange }) {
                 Eletricistas da Equipe *
               </Label>
               <span className="text-sm text-slate-500">
-                {novaEquipe.eletricistas.length}/4 eletricistas selecionados
+                {novaEquipe.eletricistas.length}/6 eletricistas selecionados
               </span>
             </div>
             <SearchableSelect
@@ -245,13 +245,13 @@ export default function EquipeSection({ equipes, onChange }) {
               onValueChange={handleEletricistaSelect}
               getLabel={getColaboradorLabel}
               getValue={getColaboradorValue}
-              disabled={!isCodigoSelecionado || novaEquipe.eletricistas.length >= 4}
-              className={`${(!isCodigoSelecionado || novaEquipe.eletricistas.length >= 4) ? "opacity-50 cursor-not-allowed" : ""}`}
+              disabled={!isCodigoSelecionado || novaEquipe.eletricistas.length >= 6}
+              className={`${(!isCodigoSelecionado || novaEquipe.eletricistas.length >= 6) ? "opacity-50 cursor-not-allowed" : ""}`}
               searchColumns={['nome','matricula_ceneged']}
             />
-            {novaEquipe.eletricistas.length < 2 && (
+            {novaEquipe.eletricistas.length < 1 && (
               <p className="text-sm text-amber-600">
-                Selecione pelo menos 2 eletricistas.
+                Selecione pelo menos 1 eletricistas.
               </p>
             )}
 
