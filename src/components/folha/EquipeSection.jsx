@@ -29,8 +29,8 @@ export default function EquipeSection({ equipes, onChange }) {
 
   const adicionarEletricista = (eletricista) => {
     if (!eletricista) return false;
-    if (novaEquipe.eletricistas.length >= 4) {
-      alert('Máximo de 4 eletricistas por equipe atingido.');
+    if (novaEquipe.eletricistas.length >= 6) {
+      alert('Máximo de 6 eletricistas por equipe atingido.');
       return false;
     }
     if (eletricista && !novaEquipe.eletricistas.includes(eletricista)) {
@@ -274,7 +274,7 @@ export default function EquipeSection({ equipes, onChange }) {
           <div className="pt-6 w-full">
             <Button 
               onClick={adicionarEquipe} 
-              disabled={!novaEquipe.codigo_equipe || !novaEquipe.supervisor || !novaEquipe.encarregado || !novaEquipe.motorista || novaEquipe.eletricistas.length < 2} 
+              disabled={!novaEquipe.codigo_equipe || !novaEquipe.supervisor || !novaEquipe.encarregado || !novaEquipe.motorista || novaEquipe.eletricistas.length < 1} 
               className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold"
             >
               <Plus className="w-4 h-4 mr-2" />
