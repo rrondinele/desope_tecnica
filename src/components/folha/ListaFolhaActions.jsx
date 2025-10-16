@@ -32,7 +32,8 @@ const FolhaActions = ({
 
   const exportDisabled =
     isExporting ||
-    (isBackoffice && ["rascunho", "aguardando_correcao"].includes(folha.status));
+    //(isBackoffice && ["rascunho", "aguardando_correcao"].includes(folha.status));
+    (!isBackoffice && ["rascunho", "aguardando_correcao"].includes(folha.status));
 
   return (
     <div className="flex flex-nowrap overflow-x-auto gap-1 py-1  justify-left">
