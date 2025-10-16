@@ -60,7 +60,9 @@ function normalizeServicosFromSupabase(servicos) {
     if (hasObservacao || hasOutros) {
       const obs = hasObservacao ? item.observacao : item.outros;
       normalized.observacao = obs ?? null;
-      normalized.outros = obs ?? null;
+      if (Object.prototype.hasOwnProperty.call(normalized, "outros")) {
+        delete normalized.outros;
+      }
     }
     return normalized;
   });

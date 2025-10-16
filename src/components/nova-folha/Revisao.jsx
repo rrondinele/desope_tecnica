@@ -86,8 +86,8 @@ export default function Revisao({ data }) {
                       <span>{servico.descricao} (Qtd: {servico.quantidade})</span>
                       <span className="font-semibold">R$ {servico.valor_total?.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                     </div>
-                    {(servico.observacao ?? servico.outros) ? (
-                      <p className="text-xs text-slate-600">Obs: {servico.observacao ?? servico.outros}</p>
+                    {servico.observacao ? (
+                      <p className="text-xs text-slate-600">Obs: {servico.observacao}</p>
                     ) : null}
                   </div>
                 ))}

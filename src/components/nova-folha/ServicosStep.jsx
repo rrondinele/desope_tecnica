@@ -20,7 +20,6 @@ export default function ServicosStep({ data, updateData }) {
     valor_unitario: 0,
     quantidade: 1,
     observacao: "",
-    outros: "",
   });
 
   // Limpa campos dependentes quando não há serviço selecionado
@@ -28,7 +27,7 @@ export default function ServicosStep({ data, updateData }) {
     if (!novoServico.descricao) {
       setNovoServico(prev => {
         if (prev.unidade || prev.unidade_medida || prev.dispendio || prev.valor_unitario || prev.observacao) {
-          return { ...prev, unidade: '', unidade_medida: '', dispendio: '', valor_unitario: 0, observacao: '', outros: '' };
+          return { ...prev, unidade: '', unidade_medida: '', dispendio: '', valor_unitario: 0, observacao: '' };
         }
         return prev;
       });
@@ -92,7 +91,6 @@ export default function ServicosStep({ data, updateData }) {
     setNovoServico((prev) => ({
       ...prev,
       observacao: value,
-      outros: value,
     }));
   };
 
@@ -109,7 +107,6 @@ export default function ServicosStep({ data, updateData }) {
         ...novoServico,
         id: Date.now(), // ID único para a lista na UI
         valor_total: novoServico.valor_unitario * novoServico.quantidade,
-        outros: novoServico.observacao
       };
 
       const servicos = [...servicosExistentes, servicoParaAdicionar];
@@ -125,7 +122,6 @@ export default function ServicosStep({ data, updateData }) {
         valor_unitario: 0,
         quantidade: novoServico.quantidade, // Mantém a quantidade para próximo serviço
         observacao: "",
-        outros: "",
       });
     }
   };
@@ -279,7 +275,7 @@ export default function ServicosStep({ data, updateData }) {
                                     max-h-12 min-h-[48px] overflow-y-auto whitespace-pre-wrap break-words
                                     w-full max-w-[200px]"
                         >
-                          {servico.observacao ?? servico.outros ?? ""}
+                          {servico.observacao || ""}
                         </div>
                       </TableCell>
                       <TableCell>
