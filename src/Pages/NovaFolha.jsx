@@ -398,6 +398,8 @@ const handleNext = () => {
     setIsSaving(true);
     try {
       const cleanedPayload = { ...payload };
+      const wasAwaitingCorrection = cleanedPayload.status === "aguardando_correcao";
+
       cleanedPayload.numero_fm = cleanedPayload.numero_fm ? cleanedPayload.numero_fm.trim() : cleanedPayload.numero_fm;
       Object.keys(cleanedPayload).forEach((key) => {
         if (cleanedPayload[key] === null || cleanedPayload[key] === undefined) {
@@ -419,6 +421,29 @@ const handleNext = () => {
       setFormErrors([]);
 
       if (cleanedPayload.id) {
+        if (wasAwaitingCorrection) {
+          const usuarioAtual =
+            profile?.full_name ||
+            profile?.email ||
+            session?.user?.email ||
+            session?.user?.user_metadata?.full_name ||
+            "sistema";
+
+          const historicoAnterior = Array.isArray(cleanedPayload.status_historico)
+            ? cleanedPayload.status_historico
+            : [];
+
+          cleanedPayload.status = "rascunho";
+          cleanedPayload.status_historico = [
+            ...historicoAnterior,
+            {
+              status: "rascunho",
+              data: new Date().toISOString(),
+              usuario: usuarioAtual,
+              observacoes: "Status retornado para rascunho apos edicao",
+            },
+          ];
+        }
         await FolhaMedicao.update(cleanedPayload.id, cleanedPayload);
       } else {
         const createdBy = {
