@@ -175,8 +175,8 @@ export default function DadosGerais({ data, updateData }) {
                     <SelectTrigger className="w-full border-slate-300"><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Programada">Programada</SelectItem>
-                      <SelectItem value="Emergencial">Emergencial</SelectItem>                   
-                    </SelectContent>
+                      <SelectItem value="Emergencial">Emergencial</SelectItem>
+                    </SelectContent>                  
                   </Select>
                 </div>
                 <div className="space-y-2">

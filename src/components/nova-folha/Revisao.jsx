@@ -43,7 +43,7 @@ export default function Revisao({ data }) {
             <div className="grid grid-cols-2 gap-4">
               <InfoItem label="Nº FM" value={data.numero_fm} />
               <InfoItem label="Técnico Light" value={data.tecnico_light} />
-              <InfoItem label="Data da Obra" value={data.data_obra ? format(new Date(data.data_obra), 'dd/MM/yyyy') : 'N/A'} />
+              <InfoItem label="Data da Obra" value={data.data_obra ? format(new Date(data.data_obra + 'T00:00:00'), 'dd/MM/yyyy') : 'N/A'} />
               <InfoItem label="Município" value={data.municipio} />
               <InfoItem label="Endereço" value={data.endereco} />
               <InfoItem label="Outros" value={data.outros} />

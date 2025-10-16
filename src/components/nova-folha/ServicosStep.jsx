@@ -65,6 +65,10 @@ export default function ServicosStep({ data, updateData }) {
   const handleServicoSelectDb = (value, row) => {
     if (!row) return;
     const label = `${row.codigo_mestre} - ${row.descricao_item}`;
+
+    // Arredonda o preço para 2 casas decimais
+    const precoArredondado = Number((Number(row.preco || 0)).toFixed(2));
+
     setNovoServico(prev => ({
       ...prev,
       codigo: row.codigo_mestre || '',
@@ -74,7 +78,7 @@ export default function ServicosStep({ data, updateData }) {
       unidade: row.unidade_medida || '',
       unidade_medida: row.unidade_medida || '',
       dispendio: row.dispendio || '',
-      valor_unitario: Number(row.preco || 0),
+      valor_unitario: precoArredondado, //Number(row.preco || 0),
       quantidade: prev.quantidade || 1,
     }));
   };
@@ -106,7 +110,7 @@ export default function ServicosStep({ data, updateData }) {
       const servicoParaAdicionar = {
         ...novoServico,
         id: Date.now(), // ID único para a lista na UI
-        valor_total: novoServico.valor_unitario * novoServico.quantidade,
+        valor_total: Number((novoServico.valor_unitario * novoServico.quantidade).toFixed(2)),
       };
 
       const servicos = [...servicosExistentes, servicoParaAdicionar];

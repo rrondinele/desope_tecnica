@@ -59,6 +59,7 @@ export const CSV_HEADERS = [
   "Numero FM",
   "Versao",
   "Projeto",
+  "Ordem de Serviço",
   "Municipio",
   "Data Obra",
   "Status",

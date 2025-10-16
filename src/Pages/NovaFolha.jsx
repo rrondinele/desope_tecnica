@@ -90,8 +90,8 @@ export default function NovaFolha() {
     empreiteira: 'CENEGED',
     tecnico_light: '',
     endereco: '',
-    tipo_processo: 'ExpansAo',
-    caracteristica: 'Programada',
+    tipo_processo: '',
+    caracteristica: '',
     data_obra: '',
     hora_acionada: '',
     hora_inicio: '',
@@ -213,7 +213,7 @@ export default function NovaFolha() {
       const folhaExistente = await FolhaMedicao.get(id);
 
       if (!folhaExistente) {
-        alert("Folha nAo encontrada para ediAAo.");
+        alert("Folha não encontrada para edição.");
         navigate(createPageUrl("ListaFolhas"));
         return;
       }
@@ -267,36 +267,39 @@ export default function NovaFolha() {
     }
   }, [formData.tipo_processo, formData.projeto]);
 
-  const handleNext = () => {
-    if (currentStep === 1) {
-      const missing = [];
-      const req = [
-        ['tecnico_light','TAcnico Light'],
-        ['data_obra','Data da Obra'],
-        ['hora_acionada','Hora Acionada'],
-        ['hora_inicio','Hora InAcio'],
-        ['hora_fim','Hora Fim'],
-        ['endereco','EndereAo Completo'],
-        ['municipio','MunicApio'],
-      ];
-      req.forEach(([k,label]) => { if (!formData[k]) missing.push(label); });
-      // ValidaAAo para Dados do Processo
-      if (formData.tipo_processo === 'ExpansAo') {
-        if (!formData.projeto || formData.projeto === 'OII-') {
+const handleNext = () => {
+  if (currentStep === 1) {
+    const missing = [];
+    const req = [
+      ['tecnico_light','Técnico Light'],
+      ['data_obra','Data da Obra'],
+      ['hora_acionada','Hora Acionada'],
+      ['hora_inicio','Hora Início'],
+      ['hora_fim','Hora Fim'],
+      ['endereco','Endereço Completo'],
+      ['municipio','Município'],
+      ['tipo_processo','Tipo de Processo'], // ← Adicionar esta linha
+      ['caracteristica','Característica'], // ← Adicionar esta linha
+    ];
+    req.forEach(([k,label]) => { if (!formData[k]) missing.push(label); });
+    
+    // Validação para Dados do Processo - APÓS validar campos básicos
+    if (!missing.length) { // Só validar projeto/OS se os campos básicos estiverem ok
+      if (formData.caracteristica === 'Programada') {
+        if (!formData.projeto || formData.projeto === 'OII-' || formData.projeto === 'OMI-') {
           missing.push('Projeto');
         }
-      } else if (formData.tipo_processo === 'ManutenAAo') {
-        const isProjetoValido = formData.projeto && formData.projeto !== 'OMI-';
-        const isOsValida = formData.ordem_servico && formData.ordem_servico.trim() !== '';
-        if (!isProjetoValido && !isOsValida) {
-          missing.push('Projeto ou Ordem de ServiAo');
+      } else if (formData.caracteristica === 'Emergencial') {
+        if (!formData.ordem_servico || formData.ordem_servico.trim() === '') {
+          missing.push('Ordem de Serviço');
         }
       }
+    }
 
-      if (missing.length) {
-        alert(`Preencha os campos obrigatA3rios:\n- ${missing.join('\n- ')}`);
-        return;
-      }
+    if (missing.length) {
+      alert(`Preencha os campos obrigatórios:\n- ${missing.join('\n- ')}`);
+      return;
+    }
 
       const minutosAcionada = toMinutes(formData.hora_acionada);
       const minutosInicio = toMinutes(formData.hora_inicio);
@@ -514,10 +517,10 @@ export default function NovaFolha() {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900 flex items-center gap-2">
               <FileText className="w-8 h-8 text-blue-600" />
-              Nova Folha de MediAAo
+              Nova Folha de Medição
             </h1>
             <p className="text-slate-600 mt-1">
-              Siga as etapas para cadastrar uma nova folha de mediAAo.
+              Siga as etapas para cadastrar uma nova folha de medição.
             </p>
           </div>
         </div>

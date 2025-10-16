@@ -641,7 +641,8 @@ const ListaFolhas = () => {
       const values = [
         folha.numero_fm || "",
         folha.versao || "1",
-        folha.projeto || "",
+        formatarProjeto(folha.projeto) || "",
+        folha.ordem_servico || "",
         folha.municipio || "",
         folha.data_obra ? format(new Date(folha.data_obra), "dd/MM/yyyy") : "",
         STATUS_CONFIG[folha.status]?.label || folha.status,
@@ -720,8 +721,8 @@ const ListaFolhas = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto w-full max-w-screen-2xl px-4 md:px-8">
+    <div className="min-h-screen bg-slate-50 overflow-x-auto"> 
+      <div className="mx-auto w-full max-w-[1900px] px-4 md:px-8">
         <motion.div 
           initial={{ opacity: 0, y: -20 }} 
           animate={{ opacity: 1, y: 0 }} 
@@ -807,12 +808,13 @@ const ListaFolhas = () => {
             </div>
 
             <Card className="shadow-lg border-0">
-              <CardContent className="pt-4">
+              <CardContent className="pt-4 px-6">
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-gray-50">
-                      <TableHead className="w-64">Número FM</TableHead>
+                      <TableHead className="w-80">Número FM</TableHead>
                       <TableHead className="w-64">Projeto</TableHead>
+                      <TableHead className="w-64">O.S.</TableHead>
                       <TableHead className="w-64">Tipo Processo</TableHead>
                       <TableHead className="w-64">Município</TableHead>
                       <TableHead className="w-64">Data Obra</TableHead>
@@ -821,14 +823,14 @@ const ListaFolhas = () => {
                       <TableHead className="w-80">Status</TableHead>
                       <TableHead className="w-64">Prazo</TableHead>
                       <TableHead className="w-64">Criado por</TableHead>
-                      <TableHead className="w-64">Valor</TableHead>
-                      <TableHead className="w-64">Ações</TableHead>
+                      <TableHead className="w-32">Valor</TableHead>
+                      <TableHead className="w-48">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={12} className="text-center py-8">
+                        <TableCell colSpan={13} className="text-center py-8">
                           Carregando...
                         </TableCell>
                       </TableRow>
@@ -841,10 +843,20 @@ const ListaFolhas = () => {
                           isAguardandoCorrecao ? "bg-red-50 hover:bg-red-100" : "hover:bg-gray-50",
                         ].filter(Boolean).join(" ");
 
+
+                        // Função para formatar o projeto - mostrar vazio se for apenas o prefixo
+                        const formatarProjeto = (projeto) => {
+                          if (!projeto || projeto === 'OII-' || projeto === 'OMI-') {
+                            return '';
+                          }
+                          return projeto;
+                        };
+
                         return (
                           <TableRow key={folha.id} className={rowClassName}>
                             <TableCell className="font-mono font-semibold">{folha.numero_fm}</TableCell>
-                            <TableCell>{folha.projeto}</TableCell>
+                            <TableCell>{formatarProjeto(folha.projeto)}</TableCell>
+                            <TableCell>{folha.ordem_servico || ''}</TableCell> 
                             <TableCell>{folha.tipo_processo}</TableCell>
                             <TableCell>{folha.municipio}</TableCell>
                             <TableCell>
