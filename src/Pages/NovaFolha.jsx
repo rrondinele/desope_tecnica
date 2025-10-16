@@ -8,6 +8,7 @@ import { ArrowLeft, FileText, ArrowRight, Save } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { hasSupabase } from "@/services/supabaseClient";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import StepIndicator from "../components/nova-folha/StepIndicator";
 import DadosGerais from "../components/nova-folha/DadosGerais";
 import ServicosStep from "../components/nova-folha/ServicosStep";
@@ -18,21 +19,55 @@ import Revisao from "../components/nova-folha/Revisao";
 
 const NUMERO_FM_PREFIX_MAP = {
   "Volta Redonda": {
-    "Expansão": "10.",
-    "Manutenção": "60.",
+    "Expansao": "10.",
+    "Manutencao": "60.",
   },
-  "Barra do Piraí": {
-    "Expansão": "70.",
-    "Manutenção": "50.",
+  "Barra do Pirai": {
+    "Expansao": "70.",
+    "Manutencao": "50.",
   },
   "Tres Rios": {
-    "Expansão": "00.",
-    "Manutenção": "40.",
+    "Expansao": "00.",
+    "Manutencao": "40.",
   },
-  "Três Rios": {
-    "Expansão": "00.",
-    "Manutenção": "40.",
-  },
+};
+
+const DRAFT_STORAGE_KEY = "nova-folha:draft";
+const REQUIRED_FIELD_LABELS = {
+  numero_fm: "Numero da Folha de Medicao",
+  tecnico_light: "Tecnico Light",
+  endereco: "Endereco",
+  tipo_processo: "Tipo de Processo",
+  data_obra: "Data da Obra",
+};
+
+const getMissingRequiredFields = (payload = {}) => {
+  const missing = [];
+
+  Object.entries(REQUIRED_FIELD_LABELS).forEach(([field, label]) => {
+    const value = payload[field];
+
+    if (field === "numero_fm") {
+      const numericPart = (value || "")
+        .toString()
+        .replace(/^FM\s*-\s*/i, "")
+        .replace(/\D/g, "");
+      if (!numericPart) {
+        missing.push(label);
+      }
+      return;
+    }
+
+    if (
+      value === undefined ||
+      value === null ||
+      (typeof value === "string" && value.trim() === "")
+    ) {
+      missing.push(label);
+    }
+  });
+
+  return missing;
 };
 
 const toMinutes = (time) => {
@@ -48,12 +83,14 @@ export default function NovaFolha() {
   const location = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [formErrors, setFormErrors] = useState([]);
   const [formData, setFormData] = useState({
     numero_fm: 'FM - ',
     empreiteira: 'CENEGED',
     tecnico_light: '',
     endereco: '',
-    tipo_processo: 'Expansão',
+    tipo_processo: 'ExpansAo',
     caracteristica: 'Programada',
     data_obra: '',
     hora_acionada: '',
@@ -71,6 +108,7 @@ export default function NovaFolha() {
     ks: '',
     cf: '',
     zona: '',
+    outros: '',
     servicos: [],
     equipes: [],
     equipamentos_instalados: [],
@@ -88,13 +126,61 @@ export default function NovaFolha() {
     numero_pagamento: '',
   });
 
+  useEffect(() => {
+    if (draftLoaded) {
+      return;
+    }
+
+    if (typeof window === "undefined") {
+      setDraftLoaded(true);
+      return;
+    }
+
+    const params = new URLSearchParams(location.search);
+    const isEditingExisting = params.has('editId') || params.has('cloneFrom');
+
+    if (isEditingExisting) {
+      setDraftLoaded(true);
+      return;
+    }
+
+    try {
+      const rawDraft = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (rawDraft) {
+        const parsedDraft = JSON.parse(rawDraft);
+        if (parsedDraft && typeof parsedDraft === "object") {
+          setFormData((prev) => ({
+            ...prev,
+            ...parsedDraft,
+          }));
+        }
+      }
+    } catch (error) {
+      console.warn("[NovaFolha] Unable to restore draft from localStorage", error);
+    } finally {
+      setDraftLoaded(true);
+    }
+  }, [draftLoaded, location.search]);
+
+  useEffect(() => {
+    if (!draftLoaded || typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(formData));
+    } catch (error) {
+      console.warn("[NovaFolha] Unable to persist draft to localStorage", error);
+    }
+  }, [formData, draftLoaded]);
+
   const steps = [
     { number: 1, title: "Dados Gerais", description: "Informações da obra" },
     { number: 2, title: "Equipes", description: "Equipes envolvidas" },
     { number: 3, title: "Serviços", description: "Serviços executados" },
     { number: 4, title: "Equipamentos", description: "Instalados/retirados" },
     { number: 5, title: "Materiais", description: "Utilizados/sobras" },
-    { number: 6, title: "Revisão", description: "Conferir e enviar" }
+    { number: 6, title: "Revisão ", description: "Conferir e enviar" }
   ];
 
   const loadFolhaParaClonar = useCallback(async (id) => {
@@ -127,7 +213,7 @@ export default function NovaFolha() {
       const folhaExistente = await FolhaMedicao.get(id);
 
       if (!folhaExistente) {
-        alert("Folha não encontrada para edição.");
+        alert("Folha nAo encontrada para ediAAo.");
         navigate(createPageUrl("ListaFolhas"));
         return;
       }
@@ -149,8 +235,8 @@ export default function NovaFolha() {
       }));
       setCurrentStep(stepNumber);
     } catch (error) {
-      console.error("Erro ao carregar folha para edição:", error);
-      alert("Não foi possível carregar a folha para edição.");
+      console.error("Erro ao carregar folha para ediAAo:", error);
+      alert("NAo foi possAvel carregar a folha para ediAAo.");
       navigate(createPageUrl("ListaFolhas"));
     }
   }, [navigate]);
@@ -174,7 +260,7 @@ export default function NovaFolha() {
   }, [location.search, loadFolhaParaClonar, loadFolhaParaEdicao, steps.length]);
   
   useEffect(() => {
-    const prefix = formData.tipo_processo === 'Manutenção' ? 'OMI-' : 'OII-';
+    const prefix = formData.tipo_processo === 'ManutenAAo' ? 'OMI-' : 'OII-';
     if (!formData.projeto?.startsWith(prefix)) {
         const currentSuffix = formData.projeto?.replace(/^(OII-|OMI-)/, '') || '';
         setFormData(prev => ({ ...prev, projeto: `${prefix}${currentSuffix}` }));
@@ -185,30 +271,30 @@ export default function NovaFolha() {
     if (currentStep === 1) {
       const missing = [];
       const req = [
-        ['tecnico_light','Técnico Light'],
+        ['tecnico_light','TAcnico Light'],
         ['data_obra','Data da Obra'],
         ['hora_acionada','Hora Acionada'],
-        ['hora_inicio','Hora Início'],
+        ['hora_inicio','Hora InAcio'],
         ['hora_fim','Hora Fim'],
-        ['endereco','Endereço Completo'],
-        ['municipio','Município'],
+        ['endereco','EndereAo Completo'],
+        ['municipio','MunicApio'],
       ];
       req.forEach(([k,label]) => { if (!formData[k]) missing.push(label); });
-      // Validação para Dados do Processo
-      if (formData.tipo_processo === 'Expansão') {
+      // ValidaAAo para Dados do Processo
+      if (formData.tipo_processo === 'ExpansAo') {
         if (!formData.projeto || formData.projeto === 'OII-') {
           missing.push('Projeto');
         }
-      } else if (formData.tipo_processo === 'Manutenção') {
+      } else if (formData.tipo_processo === 'ManutenAAo') {
         const isProjetoValido = formData.projeto && formData.projeto !== 'OMI-';
         const isOsValida = formData.ordem_servico && formData.ordem_servico.trim() !== '';
         if (!isProjetoValido && !isOsValida) {
-          missing.push('Projeto ou Ordem de Serviço');
+          missing.push('Projeto ou Ordem de ServiAo');
         }
       }
 
       if (missing.length) {
-        alert(`Preencha os campos obrigatórios:\n- ${missing.join('\n- ')}`);
+        alert(`Preencha os campos obrigatA3rios:\n- ${missing.join('\n- ')}`);
         return;
       }
 
@@ -221,39 +307,39 @@ export default function NovaFolha() {
         minutosInicio === null ||
         minutosFim === null
       ) {
-        alert("Informe horários válidos (HH:MM) para acionamento, início e fim.");
+        alert("Informe horArios vAlidos (HH:MM) para acionamento, inAcio e fim.");
         return;
       }
 
       if (minutosAcionada >= minutosInicio || minutosAcionada >= minutosFim) {
-        alert("A Hora Acionada deve ser anterior à Hora Início e à Hora Fim.");
+        alert("A Hora Acionada deve ser anterior A  Hora InAcio e A  Hora Fim.");
         return;
       }
 
       if (minutosInicio <= minutosAcionada || minutosInicio >= minutosFim) {
-        alert("A Hora Início deve ser posterior à Hora Acionada e anterior à Hora Fim.");
+        alert("A Hora InAcio deve ser posterior A  Hora Acionada e anterior A  Hora Fim.");
         return;
       }
 
       if (minutosFim <= minutosInicio || minutosFim <= minutosAcionada) {
-        alert("A Hora Fim deve ser posterior à Hora Acionada e à Hora Início.");
+        alert("A Hora Fim deve ser posterior A  Hora Acionada e A  Hora InAcio.");
         return;
       }
 
       const numeroFmRaw = (formData.numero_fm || "").toUpperCase().trim();
       if (!numeroFmRaw || /^FM\s*-\s*$/.test(numeroFmRaw)) {
-        alert("Informe o número da Folha de Medição (exemplo: FM - 10.123).");
+        alert("Informe o nAomero da Folha de MediAAo (exemplo: FM - 10.123).");
         return;
       }
 
       if (!numeroFmRaw.startsWith("FM -")) {
-        alert("O número da Folha de Medição deve começar com 'FM -'.");
+        alert("O nAomero da Folha de MediAAo deve comeAar com 'FM -'.");
         return;
       }
 
       const numeroSemPrefixo = numeroFmRaw.replace(/^FM\s*-\s*/i, "");
       if (!/^\d{2}\.\d{3}$/.test(numeroSemPrefixo)) {
-        alert("O número da Folha de Medição deve seguir o formato 'FM - XX.XXX'.");
+        alert("O nAomero da Folha de MediAAo deve seguir o formato 'FM - XX.XXX'.");
         return;
       }
 
@@ -261,7 +347,7 @@ export default function NovaFolha() {
       const expectedPrefix = NUMERO_FM_PREFIX_MAP[regionalKey]?.[formData.tipo_processo];
       if (expectedPrefix && !numeroSemPrefixo.startsWith(expectedPrefix)) {
         alert(
-          `Para a base ${regionalKey} em ${formData.tipo_processo}, o número deve começar com '${expectedPrefix}' (exemplo: FM - ${expectedPrefix}123).`
+          `Para a base ${regionalKey} em ${formData.tipo_processo}, o nAomero deve comeAar com '${expectedPrefix}' (exemplo: FM - ${expectedPrefix}123).`
         );
         return;
       }
@@ -275,7 +361,7 @@ export default function NovaFolha() {
 
         if (!temEquipamento) {
           const continuar = window.confirm(
-            "Tem certeza que não existe nenhum equipamento instalado e/ou retirado?"
+            "Tem certeza que nAo existe nenhum equipamento instalado e/ou retirado?"
           );
           if (!continuar) return;
         }
@@ -288,7 +374,7 @@ export default function NovaFolha() {
 
         if (!temMaterial) {
           const continuar = window.confirm(
-            "Tem certeza que não existe nenhum material instalado e/ou retirado?"
+            "Tem certeza que nAo existe nenhum material instalado e/ou retirado?"
           );
           if (!continuar) return;
         }
@@ -308,18 +394,27 @@ export default function NovaFolha() {
   const handleSave = async (payload) => {
     setIsSaving(true);
     try {
-      // Limpeza e preparação final dos dados
       const cleanedPayload = { ...payload };
       cleanedPayload.numero_fm = cleanedPayload.numero_fm ? cleanedPayload.numero_fm.trim() : cleanedPayload.numero_fm;
-      Object.keys(cleanedPayload).forEach(key => {
-        // Remove campos nulos ou indefinidos que não são booleanos para evitar erros de validação
+      Object.keys(cleanedPayload).forEach((key) => {
         if (cleanedPayload[key] === null || cleanedPayload[key] === undefined) {
-           if(typeof cleanedPayload[key] !== 'boolean'){
-                delete cleanedPayload[key];
-           }
+          if (typeof cleanedPayload[key] !== "boolean") {
+            delete cleanedPayload[key];
+          }
         }
       });
-      
+
+      const missingFields = getMissingRequiredFields(cleanedPayload);
+      if (missingFields.length > 0) {
+        setFormErrors(missingFields);
+        setCurrentStep(1);
+        alert("Preencha os campos obrigatorios: " + missingFields.join(", "));
+        setIsSaving(false);
+        return;
+      }
+
+      setFormErrors([]);
+
       if (cleanedPayload.id) {
         await FolhaMedicao.update(cleanedPayload.id, cleanedPayload);
       } else {
@@ -330,6 +425,7 @@ export default function NovaFolha() {
         };
         await FolhaMedicao.create({ ...cleanedPayload, ...createdBy });
       }
+
       try {
         if (hasSupabase()) {
           alert("Folha salva com sucesso no Supabase!");
@@ -337,14 +433,26 @@ export default function NovaFolha() {
           alert("Folha salva com sucesso no armazenamento local (Supabase desativado).");
         }
       } catch {}
+
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+        }
+      } catch (error) {
+        console.warn("[NovaFolha] Unable to clear draft from localStorage", error);
+      }
+
       navigate(createPageUrl("ListaFolhas"));
     } catch (error) {
       console.error("Erro ao salvar folha:", error);
-      alert("Erro ao salvar a folha. Verifique os campos obrigatórios e tente novamente.");
+      const fallbackMessage = error?.message || "Erro ao salvar a folha. Verifique os campos obrigatorios e tente novamente.";
+      setFormErrors([fallbackMessage]);
+      alert(fallbackMessage);
     } finally {
       setIsSaving(false);
     }
   };
+
 
   const renderCurrentStep = () => {
     switch (currentStep) {
@@ -377,12 +485,12 @@ export default function NovaFolha() {
         const instalados = formData.equipamentos_instalados?.length ?? 0;
         const retirados = formData.equipamentos_retirados?.length ?? 0;
         return instalados === 0 && retirados === 0;
-      }*/} return false; // Permitir avançar mesmo sem equipamentos
+      }*/} return false; // Permitir avanAar mesmo sem equipamentos
       case 5: {/*{
         const instalados = formData.materiais_instalados?.length ?? 0;
         const retirados = formData.materiais_retirados?.length ?? 0;
         return instalados === 0 && retirados === 0;
-      }*/} return false; // Permitir avançar mesmo sem materiais
+      }*/} return false; // Permitir avanAar mesmo sem materiais
       default:
         return false;
     }
@@ -406,15 +514,28 @@ export default function NovaFolha() {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900 flex items-center gap-2">
               <FileText className="w-8 h-8 text-blue-600" />
-              Nova Folha de Medição
+              Nova Folha de MediAAo
             </h1>
             <p className="text-slate-600 mt-1">
-              Siga as etapas para cadastrar uma nova folha de medição.
+              Siga as etapas para cadastrar uma nova folha de mediAAo.
             </p>
           </div>
         </div>
 
         <StepIndicator steps={steps} currentStep={currentStep} />
+
+        {formErrors.length > 0 && (
+          <Alert variant="destructive" className="mt-6">
+            <AlertTitle>Revise os campos obrigatorios</AlertTitle>
+            <AlertDescription>
+              <ul className="list-disc pl-5 space-y-1">
+                {formErrors.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card className="bg-white border-0 shadow-lg mt-8">
           <CardHeader className="border-b border-slate-100">
@@ -425,11 +546,11 @@ export default function NovaFolha() {
         </Card>
       </div>
 
-      {/* BOTÕES COM DISTÂNCIA PADRÃO DO CONTAINER */}
+      {/* BOTAES COM DISTANCIA PADRAO DO CONTAINER */}
       <div className="fixed inset-0 z-40 flex items-center justify-between pointer-events-none">
-        {/* CONTAINER INVISÍVEL PARA ALINHAMENTO */}
+        {/* CONTAINER INVISAVEL PARA ALINHAMENTO */}
         <div className="w-full max-w-6xl mx-auto px-4 md:px-8 relative">
-          {/* ESPAÇO À ESQUERDA DO CONTAINER */}
+          {/* ESPAAO A ESQUERDA DO CONTAINER */}
           <div className="absolute -left-20 md:-left-24 lg:-left-32 top-1/2 transform -translate-y-1/2">
             <Button
               variant="ghost"
@@ -442,7 +563,7 @@ export default function NovaFolha() {
             </Button>
           </div>
 
-          {/* BOTÃO DIREITA */}
+          {/* BOTAO DIREITA */}
           <div
             className="absolute top-1/2 -translate-y-1/2 right-[-8px] md:right-[-96px] lg:right-[-128px] xl:right-[-380px]"
           >

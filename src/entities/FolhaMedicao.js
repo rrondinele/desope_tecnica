@@ -46,7 +46,32 @@ function normalizeMainRecord(data) {
   d.cancelado_por = toNullIfEmpty(d.cancelado_por);
   d.tipo_motivo_reprovacao = toNullIfEmpty(d.tipo_motivo_reprovacao);
   d.motivo_reprovacao = toNullIfEmpty(d.motivo_reprovacao);
+  d.outros = toNullIfEmpty(d.outros);
   return d;
+}
+
+function normalizeServicosFromSupabase(servicos) {
+  if (!Array.isArray(servicos)) return Array.isArray(servicos) ? servicos : [];
+  return servicos.map((item) => {
+    if (!item || typeof item !== "object") return item;
+    const normalized = { ...item };
+    const hasObservacao = Object.prototype.hasOwnProperty.call(item, "observacao");
+    const hasOutros = Object.prototype.hasOwnProperty.call(item, "outros");
+    if (hasObservacao || hasOutros) {
+      const obs = hasObservacao ? item.observacao : item.outros;
+      normalized.observacao = obs ?? null;
+      normalized.outros = obs ?? null;
+    }
+    return normalized;
+  });
+}
+
+function normalizeFolhaFromSupabase(record) {
+  if (!record || typeof record !== "object") return record;
+  return {
+    ...record,
+    servicos: normalizeServicosFromSupabase(record.servicos),
+  };
 }
 
 async function withTimeout(promise, ms, label) {
@@ -74,7 +99,7 @@ export const FolhaMedicao = {
         `)
         .order(field, { ascending });
       if (error) throw error;
-      return data || [];
+      return (data || []).map(normalizeFolhaFromSupabase);
     }
 
     let all = loadAll();
@@ -85,7 +110,8 @@ export const FolhaMedicao = {
       const vb = b?.[field] ?? "";
       return desc ? (va < vb ? 1 : va > vb ? -1 : 0) : va > vb ? 1 : va < vb ? -1 : 0;
     });
-    return all;
+    const normalized = all.map(normalizeFolhaFromSupabase);
+    return normalized;
   },
 
   async get(id) {
@@ -104,10 +130,12 @@ export const FolhaMedicao = {
         .eq("id", id)
         .single();
       if (error) throw error;
-      return data || null;
+      const record = data || null;
+      return record ? normalizeFolhaFromSupabase(record) : null;
     }
     const all = loadAll();
-    return all.find((f) => f.id === id) || null;
+    const found = all.find((f) => f.id === id) || null;
+    return found ? normalizeFolhaFromSupabase(found) : null;
   },
 
   async create(data) {

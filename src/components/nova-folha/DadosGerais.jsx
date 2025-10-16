@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Building2, FileCog } from "lucide-react";
 import SearchableSelect from "@/components/SearchableSelect";
 import { fetchTecnicos, fetchMunicipios } from "@/services/lookups";
@@ -274,6 +275,17 @@ export default function DadosGerais({ data, updateData }) {
                 <div className="space-y-2">
                     <Label htmlFor="zona" className="text-sm font-semibold text-slate-700">Zona</Label>
                     <Input id="zona" value={data.zona || ''} onChange={e => handleInputChange('zona', e.target.value)} placeholder="" className="border-slate-300" />
+                </div>
+                <div className="space-y-2 md:col-span-2 lg:col-span-4">
+                    <Label htmlFor="outros" className="text-sm font-semibold text-slate-700">Outros</Label>
+                    <Textarea
+                      id="outros"
+                      rows={3}
+                      value={data.outros || ''}
+                      onChange={(e) => handleInputChange('outros', e.target.value)}
+                      placeholder="Observacoes gerais da obra"
+                      className="border-slate-300"
+                    />
                 </div>
             </div>
         </CardContent>

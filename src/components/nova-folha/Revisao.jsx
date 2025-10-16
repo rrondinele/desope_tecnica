@@ -46,6 +46,7 @@ export default function Revisao({ data }) {
               <InfoItem label="Data da Obra" value={data.data_obra ? format(new Date(data.data_obra), 'dd/MM/yyyy') : 'N/A'} />
               <InfoItem label="Município" value={data.municipio} />
               <InfoItem label="Endereço" value={data.endereco} />
+              <InfoItem label="Outros" value={data.outros} />
               <InfoItem label="Criado por" value={(data.created_by_matricula && data.created_by_name) ? `${data.created_by_matricula} - ${data.created_by_name}` : (profile ? `${profile.matricula || ''} - ${profile.full_name || ''}` : 'N/A')} />
             </div>
           </SectionCard>
@@ -80,9 +81,14 @@ export default function Revisao({ data }) {
             {data.servicos?.length > 0 ? (
               <div className="space-y-2">
                 {data.servicos.map((servico, index) => (
-                  <div key={index} className="p-2 bg-slate-50 rounded text-sm flex justify-between">
-                    <span>{servico.descricao} (Qtd: {servico.quantidade})</span>
-                    <span className="font-semibold">R$ {servico.valor_total?.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                  <div key={index} className="p-3 bg-slate-50 rounded text-sm space-y-2">
+                    <div className="flex justify-between gap-4">
+                      <span>{servico.descricao} (Qtd: {servico.quantidade})</span>
+                      <span className="font-semibold">R$ {servico.valor_total?.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                    </div>
+                    {(servico.observacao ?? servico.outros) ? (
+                      <p className="text-xs text-slate-600">Obs: {servico.observacao ?? servico.outros}</p>
+                    ) : null}
                   </div>
                 ))}
                 <div className="pt-2 border-t mt-2 flex justify-between items-center">

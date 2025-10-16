@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { DollarSign, Plus, Trash2, Calculator } from "lucide-react";
@@ -18,14 +19,16 @@ export default function ServicosStep({ data, updateData }) {
     dispendio: '',
     valor_unitario: 0,
     quantidade: 1,
+    observacao: "",
+    outros: "",
   });
 
   // Limpa campos dependentes quando não há serviço selecionado
   useEffect(() => {
     if (!novoServico.descricao) {
       setNovoServico(prev => {
-        if (prev.unidade || prev.unidade_medida || prev.dispendio || prev.valor_unitario) {
-          return { ...prev, unidade: '', unidade_medida: '', dispendio: '', valor_unitario: 0 };
+        if (prev.unidade || prev.unidade_medida || prev.dispendio || prev.valor_unitario || prev.observacao) {
+          return { ...prev, unidade: '', unidade_medida: '', dispendio: '', valor_unitario: 0, observacao: '', outros: '' };
         }
         return prev;
       });
@@ -85,6 +88,14 @@ export default function ServicosStep({ data, updateData }) {
     }));
   };
 
+  const handleObservacaoChange = (value) => {
+    setNovoServico((prev) => ({
+      ...prev,
+      observacao: value,
+      outros: value,
+    }));
+  };
+
   const adicionarServico = () => {
     if (novoServico.descricao && novoServico.quantidade > 0) {
       const codigoAtual = String(novoServico.codigo_mestre || novoServico.codigo || '').trim();
@@ -97,7 +108,8 @@ export default function ServicosStep({ data, updateData }) {
       const servicoParaAdicionar = {
         ...novoServico,
         id: Date.now(), // ID único para a lista na UI
-        valor_total: novoServico.valor_unitario * novoServico.quantidade
+        valor_total: novoServico.valor_unitario * novoServico.quantidade,
+        outros: novoServico.observacao
       };
 
       const servicos = [...servicosExistentes, servicoParaAdicionar];
@@ -111,7 +123,9 @@ export default function ServicosStep({ data, updateData }) {
         descricao_exibicao: '',
         unidade: '',
         valor_unitario: 0,
-        quantidade: novoServico.quantidade // Mantém a quantidade para próximo serviço
+        quantidade: novoServico.quantidade, // Mantém a quantidade para próximo serviço
+        observacao: "",
+        outros: "",
       });
     }
   };
@@ -187,6 +201,17 @@ export default function ServicosStep({ data, updateData }) {
             </div>
           </div>
 
+          <div className="space-y-2 mt-4">
+            <Label className="text-slate-700 font-medium">Observação</Label>
+            <Textarea
+              value={novoServico.observacao}
+              onChange={(e) => handleObservacaoChange(e.target.value)}
+              placeholder="Observações sobre o serviço"
+              rows={3}
+              className="border-slate-300"
+            />
+          </div>
+
           {/* Preview do valor total do serviço atual */}
           {novoServico.descricao && novoServico.quantidade > 0 && (
             <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
@@ -226,24 +251,36 @@ export default function ServicosStep({ data, updateData }) {
                 <TableHeader>
                   <TableRow className="bg-slate-50">
                     <TableHead className="font-semibold">Descrição do Serviço</TableHead>
-                    <TableHead className="font-semibold text-center">Quantidade</TableHead>
-                    <TableHead className="font-semibold text-center">Unidade</TableHead>
-                    <TableHead className="font-semibold text-center">Dispêndio</TableHead>
-                    <TableHead className="font-semibold text-right">Preço (R$)</TableHead>
-                    <TableHead className="font-semibold text-right">Valor Total</TableHead>
+                    <TableHead className="font-semibold text-center w-24">Quantidade</TableHead>
+                    <TableHead className="font-semibold text-center w-20">Unidade</TableHead>
+                    <TableHead className="font-semibold text-center w-24">Dispêndio</TableHead>
+                    <TableHead className="font-semibold text-right w-32">Preço (R$)</TableHead>
+                    <TableHead className="font-semibold text-right w-32">Valor Total</TableHead>
+                    <TableHead className="font-semibold w-48">Observação</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.servicos.map((servico) => (
+                  {data.servicos.map((servico, index) => (
                     <TableRow key={servico.id}>
-                      <TableCell className="font-medium">{servico.codigo_mestre ? `${servico.codigo_mestre} - ${servico.descricao}` : servico.descricao}</TableCell>
+                      <TableCell className="font-medium">
+                        {servico.codigo_mestre ? `${servico.codigo_mestre} - ${servico.descricao}` : servico.descricao}
+                      </TableCell>
                       <TableCell className="text-center">{servico.quantidade}</TableCell>
                       <TableCell className="text-center">{servico.unidade_medida || servico.unidade}</TableCell>
                       <TableCell className="text-center">{servico.dispendio || ''}</TableCell>
                       <TableCell className="text-right">R$ {servico.valor_unitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
                       <TableCell className="font-semibold text-green-600 text-right">
                         R$ {servico.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <div 
+                          className="text-sm text-slate-700 bg-slate-50 p-2 rounded border border-slate-200 
+                                    max-h-12 min-h-[48px] overflow-y-auto whitespace-pre-wrap break-words
+                                    w-full max-w-[200px]"
+                        >
+                          {servico.observacao ?? servico.outros ?? ""}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Button

@@ -1,11 +1,13 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Trash2, TrendingUp, TrendingDown, Upload, Download } from "lucide-react";
 import SearchableSelect from "@/components/SearchableSelect";
+import { downloadMateriaisTemplate, parseMateriaisXlsx } from "@/utils/materiaisExcel";
+import { fetchMateriaisByCodigos } from "@/services/lookups";
 
 const initialState = { descricao: "", lote: "", quantidade: "", origem: "", umb: "" };
 
@@ -185,6 +187,101 @@ const MateriaisList = ({ materiais, onRemove }) => {
   );
 };
 
+const PlanilhaUploadButton = ({ label, onImport, onDownloadTemplate }) => {
+  const inputRef = useRef(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleClick = () => {
+    if (isProcessing) return;
+    inputRef.current?.click();
+  };
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsProcessing(true);
+      const { materiais, warnings: parseWarnings } = await parseMateriaisXlsx(file);
+      const hasMateriais = materiais.length > 0;
+      let importResult = null;
+      if (hasMateriais) {
+        importResult = (await onImport(materiais)) || null;
+      }
+
+      const messages = [];
+      const importedCount =
+        importResult && typeof importResult.importedCount === "number"
+          ? importResult.importedCount
+          : hasMateriais
+          ? materiais.length
+          : 0;
+
+      const extraWarnings = [
+        ...(Array.isArray(parseWarnings) ? parseWarnings : []),
+        ...(importResult?.warnings ?? []),
+      ].filter(Boolean);
+
+      if (importedCount > 0) {
+        messages.push(`${importedCount} materiais importados com sucesso.`);
+      }
+      if (extraWarnings.length > 0) {
+        messages.push(extraWarnings.join("\n"));
+      }
+      if (messages.length > 0) {
+        alert(messages.join("\n\n"));
+      }
+      if (!hasMateriais && extraWarnings.length === 0) {
+        alert("Nenhum material válido foi encontrado na planilha.");
+      }
+    } catch (error) {
+      console.error("Erro ao importar planilha de materiais:", error);
+      const message =
+        error?.message || "Não foi possível ler o arquivo. Verifique o formato e tente novamente.";
+      alert(message);
+    } finally {
+      setIsProcessing(false);
+      // Permite selecionar o mesmo arquivo novamente
+      event.target.value = "";
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".xlsx,.xls"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleClick}
+        disabled={isProcessing}
+        className="flex items-center gap-2 text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700 disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        <Upload className="w-4 h-4" />
+        {label}
+      </Button>
+      {onDownloadTemplate && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onDownloadTemplate}
+          className="text-green-600 hover:text-green-700 hover:bg-green-50 disabled:opacity-60 disabled:cursor-not-allowed"
+          disabled={isProcessing}
+          title="Baixar modelo de importação"
+        >
+          <Download className="w-4 h-4" />
+        </Button>
+      )}
+    </div>
+  );
+};
+
 export default function MateriaisSection({
   materiaisInstalados,
   materiaisRetirados,
@@ -210,6 +307,88 @@ export default function MateriaisSection({
     onChangeRetirados((materiaisRetirados || []).filter((m) => m.id !== id));
   };
 
+  const complementarMateriais = async (materiais = []) => {
+    const lista = Array.isArray(materiais) ? materiais : [];
+    const codigos = Array.from(
+      new Set(
+        lista
+          .map((item) =>
+            item?.lote === null || item?.lote === undefined ? "" : String(item.lote).trim()
+          )
+          .filter(Boolean)
+      )
+    );
+
+    let lookupResult = { data: {}, available: true };
+    const warnings = [];
+
+    try {
+      lookupResult = await fetchMateriaisByCodigos(codigos);
+    } catch (error) {
+      console.error("Erro ao consultar materiais por lote:", error);
+      warnings.push("Falha ao consultar a base de materiais. Verifique sua conexão e tente novamente.");
+    }
+
+    const detalhesMap = lookupResult?.data || {};
+    const notFound = new Set();
+
+    const enriquecidos = lista.map((material) => {
+      const codigo = material?.lote === null || material?.lote === undefined ? "" : String(material.lote).trim();
+      const detalhes = detalhesMap[codigo];
+      if (!detalhes && codigo) {
+        notFound.add(codigo);
+      }
+      return {
+        ...material,
+        descricao: material.descricao || detalhes?.descricao || "",
+        umb: material.umb || detalhes?.umb || "",
+      };
+    });
+
+    if (lookupResult?.available === false) {
+      warnings.push(
+        "A consulta a base de materiais não está disponível. Descrições e unidades não foram preenchidas automaticamente."
+      );
+    } else if (lookupResult?.error) {
+      warnings.push(`Erro ao consultar materiais: ${lookupResult.error}`);
+    } else if (notFound.size > 0) {
+      warnings.push(`Lotes não encontrados na base: ${Array.from(notFound).join(", ")}.`);
+    }
+
+    return { materiais: enriquecidos, warnings };
+  };
+
+  const importarInstalados = async (materiais) => {
+    if (!materiais || materiais.length === 0) {
+      return { importedCount: 0, warnings: [] };
+    }
+    const { materiais: enriquecidos, warnings } = await complementarMateriais(materiais);
+    if (enriquecidos.length > 0) {
+      onChangeInstalados([...(materiaisInstalados || []), ...enriquecidos]);
+    }
+    return { importedCount: enriquecidos.length, warnings };
+  };
+
+  const importarRetirados = async (materiais) => {
+    if (!materiais || materiais.length === 0) {
+      return { importedCount: 0, warnings: [] };
+    }
+    const { materiais: enriquecidos, warnings } = await complementarMateriais(materiais);
+    if (enriquecidos.length > 0) {
+      onChangeRetirados([...(materiaisRetirados || []), ...enriquecidos]);
+    }
+    return { importedCount: enriquecidos.length, warnings };
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      await downloadMateriaisTemplate();
+    } catch (error) {
+      console.error("Erro ao baixar modelo de importação de materiais:", error);
+      alert("Não foi possível baixar o modelo de importação. Tente novamente.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="instalados" className="w-full">
@@ -232,11 +411,16 @@ export default function MateriaisSection({
 
         <TabsContent value="instalados" className="space-y-6">
           <Card className="border-slate-200 shadow-sm">
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <CardTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
                 <Plus className="w-5 h-5 text-green-600" />
                 Adicionar Material Instalado
               </CardTitle>
+              <PlanilhaUploadButton
+                label="Importar planilha"
+                onImport={importarInstalados}
+                onDownloadTemplate={handleDownloadTemplate}
+              />
             </CardHeader>
             <CardContent>
               <MaterialForm onAdd={adicionarInstalado} />
@@ -258,11 +442,16 @@ export default function MateriaisSection({
 
         <TabsContent value="retirados" className="space-y-6">
           <Card className="border-slate-200 shadow-sm">
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <CardTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
                 <Plus className="w-5 h-5 text-red-600" />
                 Adicionar Material Retirado
               </CardTitle>
+              <PlanilhaUploadButton
+                label="Importar planilha"
+                onImport={importarRetirados}
+                onDownloadTemplate={handleDownloadTemplate}
+              />
             </CardHeader>
             <CardContent>
               <MaterialForm onAdd={adicionarRetirado} />
