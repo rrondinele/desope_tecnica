@@ -236,7 +236,7 @@ export default function NovaFolha() {
       setCurrentStep(stepNumber);
     } catch (error) {
       console.error("Erro ao carregar folha para ediAAo:", error);
-      alert("NAo foi possAvel carregar a folha para ediAAo.");
+      alert("Não foi possAvel carregar a folha para edição.");
       navigate(createPageUrl("ListaFolhas"));
     }
   }, [navigate]);
@@ -260,7 +260,7 @@ export default function NovaFolha() {
   }, [location.search, loadFolhaParaClonar, loadFolhaParaEdicao, steps.length]);
   
   useEffect(() => {
-    const prefix = formData.tipo_processo === 'ManutenAAo' ? 'OMI-' : 'OII-';
+    const prefix = formData.tipo_processo === 'Manutenção' ? 'OMI-' : 'OII-';
     if (!formData.projeto?.startsWith(prefix)) {
         const currentSuffix = formData.projeto?.replace(/^(OII-|OMI-)/, '') || '';
         setFormData(prev => ({ ...prev, projeto: `${prefix}${currentSuffix}` }));
@@ -331,18 +331,18 @@ const handleNext = () => {
 
       const numeroFmRaw = (formData.numero_fm || "").toUpperCase().trim();
       if (!numeroFmRaw || /^FM\s*-\s*$/.test(numeroFmRaw)) {
-        alert("Informe o nAomero da Folha de MediAAo (exemplo: FM - 10.123).");
+        alert("Informe o número da Folha de Medição (exemplo: FM - 10.123).");
         return;
       }
 
       if (!numeroFmRaw.startsWith("FM -")) {
-        alert("O nAomero da Folha de MediAAo deve comeAar com 'FM -'.");
+        alert("O nAomero da Folha de Medição deve começar com 'FM -'.");
         return;
       }
 
       const numeroSemPrefixo = numeroFmRaw.replace(/^FM\s*-\s*/i, "");
       if (!/^\d{2}\.\d{3}$/.test(numeroSemPrefixo)) {
-        alert("O nAomero da Folha de MediAAo deve seguir o formato 'FM - XX.XXX'.");
+        alert("O número da Folha de Medição deve seguir o formato 'FM - XX.XXX'.");
         return;
       }
 
@@ -350,7 +350,7 @@ const handleNext = () => {
       const expectedPrefix = NUMERO_FM_PREFIX_MAP[regionalKey]?.[formData.tipo_processo];
       if (expectedPrefix && !numeroSemPrefixo.startsWith(expectedPrefix)) {
         alert(
-          `Para a base ${regionalKey} em ${formData.tipo_processo}, o nAomero deve comeAar com '${expectedPrefix}' (exemplo: FM - ${expectedPrefix}123).`
+          `Para a base ${regionalKey} em ${formData.tipo_processo}, o número deve começar com '${expectedPrefix}' (exemplo: FM - ${expectedPrefix}123).`
         );
         return;
       }
@@ -364,7 +364,7 @@ const handleNext = () => {
 
         if (!temEquipamento) {
           const continuar = window.confirm(
-            "Tem certeza que nAo existe nenhum equipamento instalado e/ou retirado?"
+            "Tem certeza que não existe nenhum equipamento instalado e/ou retirado?"
           );
           if (!continuar) return;
         }
@@ -377,7 +377,7 @@ const handleNext = () => {
 
         if (!temMaterial) {
           const continuar = window.confirm(
-            "Tem certeza que nAo existe nenhum material instalado e/ou retirado?"
+            "Tem certeza que não existe nenhum material instalado e/ou retirado?"
           );
           if (!continuar) return;
         }

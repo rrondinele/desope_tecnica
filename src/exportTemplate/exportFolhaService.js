@@ -1,7 +1,10 @@
 import { FolhaMedicao } from "@/entities/FolhaMedicao";
-import { format } from "date-fns";
 import { supabase, hasSupabase } from "@/services/supabaseClient";
 import { exportFolhaMedicao } from "./exportFolhaMedicao";
+import headMapping from "@/Mappings/Headmapping_excel.json";
+import { getValueFromPath } from "@/rules/listFMRules";
+import { parseLocalDate } from "@/utils/listafolhaUtils";
+import { format } from "date-fns";
 
 const INVALID_FILENAME_CHARS = /[<>:"\/\|?*]/g;
 
@@ -21,49 +24,129 @@ const sanitizeFilePart = (value) => {
     .trim();
 };
 
-const buildExportTitle = (folha) => {
-  const numero = sanitizeFilePart(folha?.numero_fm) || 'SEM_NUMERO';
-  const principal = sanitizeFilePart(
-    folha?.projeto || folha?.ordem_manutencao || folha?.ordem_servico,
-  ) || 'SEM_PROJETO';
+const priorityMappings = Array.isArray(headMapping.__priorityMappings)
+  ? headMapping.__priorityMappings
+  : [];
 
-  let dataObraSegment = '';
-  const dataObra = folha?.data_obra;
-  if (dataObra) {
-    const parsed = dataObra instanceof Date ? dataObra : new Date(dataObra);
-    if (!Number.isNaN(parsed.getTime())) {
-      dataObraSegment = format(parsed, 'dd-MM-yy');
+const normalizeTrimmed = (value) => {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  return String(value).trim();
+};
+
+const getPriorityProjectValue = (folha) => {
+  const context = { data: folha };
+  const rule = priorityMappings.find(
+    (entry) => Array.isArray(entry?.fields) && entry.fields.includes("data.projeto"),
+  );
+
+  if (!rule) {
+    return normalizeTrimmed(folha?.projeto);
+  }
+
+  const { fields = [], appendToPrimary, appendFormat } = rule;
+  if (fields.length === 0) {
+    return normalizeTrimmed(folha?.projeto);
+  }
+
+  let baseValue;
+  let baseField;
+
+  for (const field of fields) {
+    const candidate = getValueFromPath(context, field);
+    if (normalizeTrimmed(candidate)) {
+      baseValue = candidate;
+      baseField = field;
+      break;
+    }
+  }
+
+  if (!baseField) {
+    return normalizeTrimmed(getValueFromPath(context, fields[0]));
+  }
+
+  let finalValue = normalizeTrimmed(baseValue);
+
+  if (fields[0] === baseField) {
+    const extras = Array.isArray(appendToPrimary) && appendToPrimary.length > 0
+      ? appendToPrimary
+      : fields.slice(1);
+    const formatMask = typeof appendFormat === "string" && appendFormat.includes("{value}")
+      ? appendFormat
+      : "({value})";
+
+    const additions = extras
+      .map((field) => {
+        if (field === baseField) {
+          return null;
+        }
+        const extraValue = getValueFromPath(context, field);
+        const trimmed = normalizeTrimmed(extraValue);
+        if (!trimmed) {
+          return null;
+        }
+        return formatMask.replace("{value}", trimmed);
+      })
+      .filter(Boolean)
+      .join("");
+
+    if (additions) {
+      finalValue = `${finalValue}${additions}`;
+    }
+  }
+
+  return finalValue;
+};
+
+const buildExportTitle = (folha) => {
+  const numero = sanitizeFilePart(folha?.numero_fm);
+  const tecnico = sanitizeFilePart(folha?.tecnico_light);
+
+  if (numero && tecnico) {
+    return `${numero} - ${tecnico}`;
+  }
+
+  if (numero) {
+    return numero;
+  }
+
+  if (tecnico) {
+    return tecnico;
+  }
+
+  return 'FOLHA DE MEDICAO';
+};
+
+export const buildExcelFileName = (folha) => {
+  const numero = sanitizeFilePart(folha?.numero_fm);
+  const projetoDisplay = sanitizeFilePart(getPriorityProjectValue(folha) || folha?.projeto);
+
+  let dataObraPart = "";
+  if (folha?.data_obra) {
+    const parsed = parseLocalDate(folha.data_obra);
+    if (parsed instanceof Date && !Number.isNaN(parsed.getTime())) {
+      dataObraPart = format(parsed, "dd-MM-yy");
+    } else {
+      dataObraPart = sanitizeFilePart(folha.data_obra);
     }
   }
 
   const circuito = sanitizeFilePart(folha?.circuito);
-  const encarregadoPrincipal = sanitizeFilePart(
+  const encarregado = sanitizeFilePart(
     folha?.encarregado || folha?.equipes?.[0]?.encarregado,
   );
 
-  let circuitoEnc = '';
-  if (circuito && encarregadoPrincipal) {
-    circuitoEnc = `${circuito}-${encarregadoPrincipal}`;
-  } else if (circuito) {
-    circuitoEnc = circuito;
-  } else if (encarregadoPrincipal) {
-    circuitoEnc = encarregadoPrincipal;
+  const parts = [numero, projetoDisplay, dataObraPart, circuito, encarregado].filter(Boolean);
+
+  if (parts.length === 0) {
+    return "folha_medicao.xlsx";
   }
 
-  const parts = [`FOLHA DE MEDIÇÃO ${numero}`, `- ${principal}`];
-  if (dataObraSegment) {
-    parts.push(`de ${dataObraSegment}`);
-  }
-  if (circuitoEnc) {
-    parts.push(circuitoEnc);
-  }
-
-  return parts.join(' ').replace(/\s+/g, ' ').trim();
-};
-
-export const buildExcelFileName = (folha) => {
-  const title = buildExportTitle(folha) || 'folha_medicao';
-  return `${title}.xlsx`;
+  return `${parts.join(" - ")}.xlsx`;
 };
 
 const isMissingRelationError = (error) => {
@@ -261,6 +344,7 @@ export const exportFolhaById = async (folhaId, { fallbackData } = {}) => {
     throw new Error('Folha not found for export');
   }
 
+  payload.contrato = payload.contrato || '4600010309';
   payload.export_title = buildExportTitle(payload);
 
   const fileName = buildExcelFileName(payload);

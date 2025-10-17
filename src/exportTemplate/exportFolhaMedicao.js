@@ -16,6 +16,33 @@ const DATE_FIELDS = new Set(fieldRules.dateFields ?? []);
 const NUMERIC_FIELDS = new Set(fieldRules.numericFields ?? []);
 const FALLBACK_STYLE = templateRules.fallbackStyle ?? { enabled: false };
 
+const parseLocalDateLike = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [year, month, day] = value.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(value)) {
+      return new Date(value.replace(" ", "T"));
+    }
+  }
+
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) {
+    return null;
+  }
+  return new Date(parsed);
+};
+
 const fetchTemplateWorkbook = async () => {
   const response = await fetch(EXCEL_TEMPLATE_PATH);
   if (!response.ok) {
@@ -77,9 +104,9 @@ const formatValueForExcel = (value, path) => {
     }
 
     if (DATE_FIELDS.has(fieldName || "")) {
-      const parsed = Date.parse(trimmed);
-      if (!Number.isNaN(parsed)) {
-        return format(new Date(parsed), DEFAULT_DATE_FORMAT);
+      const parsed = parseLocalDateLike(trimmed);
+      if (parsed) {
+        return format(parsed, DEFAULT_DATE_FORMAT);
       }
     }
 
@@ -123,13 +150,89 @@ const setSheetValue = (sheet, cellRef, rawValue, path) => {
   applyFallbackStyle(cell);
 };
 
+const normalizeTrimmed = (value) => {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  return String(value).trim();
+};
+
 const fillHeadMapping = (sheet, folha) => {
   const context = { data: folha };
+  const priorityMappings = Array.isArray(headMapping.__priorityMappings)
+    ? headMapping.__priorityMappings
+    : [];
+
   Object.entries(headMapping).forEach(([path, cellRef]) => {
+    if (path.startsWith("__") || typeof cellRef !== "string") {
+      return;
+    }
     const value = getValueFromPath(context, path);
-
-
     setSheetValue(sheet, cellRef, value, path);
+  });
+
+  priorityMappings.forEach((rule) => {
+    if (!rule || typeof rule !== "object") {
+      return;
+    }
+
+    const { cell, fields, appendToPrimary, appendFormat } = rule;
+
+    if (!cell || !Array.isArray(fields) || fields.length === 0) {
+      return;
+    }
+
+    let baseValue;
+    let baseField;
+
+    for (const field of fields) {
+      const candidate = getValueFromPath(context, field);
+      if (normalizeTrimmed(candidate)) {
+        baseValue = candidate;
+        baseField = field;
+        break;
+      }
+    }
+
+    if (!baseField) {
+      setSheetValue(sheet, cell, "", fields[0] || "");
+      return;
+    }
+
+    let finalValue = normalizeTrimmed(baseValue);
+
+    if (fields[0] === baseField) {
+      const extras = Array.isArray(appendToPrimary) && appendToPrimary.length > 0
+        ? appendToPrimary
+        : fields.slice(1);
+      const formatMask = typeof appendFormat === "string" && appendFormat.includes("{value}")
+        ? appendFormat
+        : "({value})";
+
+      const additions = extras
+        .map((field) => {
+          if (field === baseField) {
+            return null;
+          }
+          const extraValue = getValueFromPath(context, field);
+          const trimmed = normalizeTrimmed(extraValue);
+          if (!trimmed) {
+            return null;
+          }
+          return formatMask.replace("{value}", trimmed);
+        })
+        .filter(Boolean)
+        .join("");
+
+      if (additions) {
+        finalValue = `${finalValue}${additions}`;
+      }
+    }
+
+    setSheetValue(sheet, cell, finalValue, baseField);
   });
 };
 

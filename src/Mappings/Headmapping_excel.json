@@ -13,13 +13,27 @@
     "data.municipio":  "H11",
     "data.circuito":  "K5",
     "data.projeto":  "K6",
-    "data.ordem_servico":  "K6",
-    "data.ordem_manutencao":  "K6",
+    "__priorityMappings": [
+        {
+            "cell": "K6",
+            "fields": [
+                "data.projeto",
+                "data.ordem_manutencao",
+                "data.ordem_servico"
+            ],
+            "appendToPrimary": [
+                "data.ordem_servico",
+                "data.ordem_manutencao"
+            ],
+            "appendFormat": "({value})"
+        }
+    ],
     "data.reserva":  "K7",
     "data.ntc":  "K8",
     "data.pi":  "K9",
     "data.ks":  "K10",
     "data.cf":  "K11",
     "data.zona":  "K12",
+    "data.contrato":  "M5",
     "data.valor_total":  "L26"
 }
