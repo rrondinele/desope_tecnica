@@ -11,8 +11,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
-  Files, Mail, Share, AlertOctagon, AlertTriangle, Clock, ShieldCheck, CheckCircle, 
-  LayoutGrid, List, FileDown, Eye, Edit, Send, DollarSign, XCircle, LogOut 
+  Files, Mail, Share, AlertOctagon, AlertTriangle, Clock, ShieldCheck, CheckCircle, LayoutGrid, List, 
+  FileDown, Eye, Edit, Send, DollarSign, XCircle, LogOut, TrendingUp, TrendingDown, PackagePlus, PackageMinus,
 } from "lucide-react";
 import { format, differenceInBusinessDays } from "date-fns";
 import { motion } from "framer-motion";
@@ -64,19 +64,19 @@ const getPrazoInfo = (folha) => {
 };
 
 const NAO_VALIDACAO_MOTIVOS = [
-  "Erro Atividade",
-  "Erro Equipamento",
-  "Erro Material",
-  "Erro Equipe",
-  "Erro Dados Cadastral",
+  "Erro Atividades",
+  "Erro Equipamentos",
+  "Erro Materiais",
+  "Erro Equipes",
+  "Erro Dados Cadastrais",
 ];
 
 const MOTIVO_PARA_STEP = {
-  "Erro Dados Cadastral": 1,
-  "Erro Equipe": 2,
-  "Erro Atividade": 3,
-  "Erro Equipamento": 4,
-  "Erro Material": 5,
+  "Erro Dados Cadastrais": 1,
+  "Erro Equipes": 2,
+  "Erro Atividades": 3,
+  "Erro Equipamentos": 4,
+  "Erro Materiais": 5,
 };
 
 const STATUS_CANCELAMENTO_BY_ORIGEM = {
@@ -333,6 +333,63 @@ const ListaFolhas = () => {
     return selectedFolha?.data_obra ? parseLocalDate(selectedFolha.data_obra) : null;
   }, [selectedFolha]);
 
+  const historicoCompleto = useMemo(() => {
+    if (!selectedFolha) return [];
+
+    const historicoBruto = Array.isArray(selectedFolha.status_historico)
+      ? selectedFolha.status_historico.filter((item) => item && item.status)
+      : [];
+
+    const getDataValor = (item) => {
+      if (!item?.data) return Number.POSITIVE_INFINITY;
+      const parsed = new Date(item.data).getTime();
+      return Number.isNaN(parsed) ? Number.POSITIVE_INFINITY : parsed;
+    };
+
+    const historicoOrdenado = [...historicoBruto].sort((a, b) => getDataValor(a) - getDataValor(b));
+
+    const createdDate =
+      selectedFolha.created_date ||
+      selectedFolha.created_at ||
+      selectedFolha.createdAt ||
+      selectedFolha.createdDate ||
+      null;
+
+    const creatorIdentifier = (() => {
+      if (selectedFolha.created_by_matricula && selectedFolha.created_by_name) {
+        return `${selectedFolha.created_by_matricula} - ${selectedFolha.created_by_name}`;
+      }
+      if (selectedFolha.created_by_name) {
+        return selectedFolha.created_by_name;
+      }
+      if (selectedFolha.created_by_matricula) {
+        return selectedFolha.created_by_matricula;
+      }
+      if (selectedFolha.created_by_user_id) {
+        return selectedFolha.created_by_user_id;
+      }
+      return null;
+    })();
+
+    if (historicoOrdenado.length > 0 && historicoOrdenado[0]?.status === "rascunho") {
+      return historicoOrdenado;
+    }
+
+    const entradaInicial = {
+      status: "rascunho",
+      data: createdDate || historicoOrdenado[0]?.data || null,
+      usuario: creatorIdentifier || historicoOrdenado[0]?.usuario || undefined,
+      observacoes: "Folha criada",
+    };
+
+    return [entradaInicial, ...historicoOrdenado];
+  }, [selectedFolha]);
+
+  const equipamentosInstalados = selectedFolha?.equipamentos_instalados || [];
+  const equipamentosRetirados = selectedFolha?.equipamentos_retirados || [];
+  const materiaisInstalados = selectedFolha?.materiais_instalados || [];
+  const materiaisRetirados = selectedFolha?.materiais_retirados || [];
+
   const handleValidarFolha = async () => {
     if (!selectedFolha || !canValidate) return;
     try {
@@ -504,11 +561,11 @@ const ListaFolhas = () => {
       await loadFolhas();
 
       if (solicitacaoPendente) {
-        alert("Solicitacao de cancelamento registrada e aguardando aprovacão.");
+        alert("Solicitação de cancelamento registrada e aguardando aprovação.");
       }
     } catch (error) {
       console.error("Erro ao cancelar folha:", error);
-      alert("Nao foi possivel cancelar a folha. Tente novamente.");
+      alert("Não foi possível cancelar a folha. Tente novamente.");
     }
   };
 
@@ -529,9 +586,9 @@ const ListaFolhas = () => {
     const canceladoPor = selectedFolha.cancelado_por || "Distribuidora";
     const statusFinalCancelamento =
       STATUS_CANCELAMENTO_BY_ORIGEM[canceladoPor] || "cancelado_distribuidora";
-    const motivoTipo = selectedFolha.motivo_cancelamento_tipo || "Nao informado";
-    const justificativaSolicitacao = selectedFolha.motivo_cancelamento || "Nao informado";
-    const detalhesCancelamento = `Cancelado por: ${canceladoPor} | Motivo: ${motivoTipo} | Justificativa: ${justificativaSolicitacao}`;
+    const motivoTipo = selectedFolha.motivo_cancelamento_tipo || "Não informado";
+    const justificativaSolicitacao = selectedFolha.motivo_cancelamento || "Não informado";
+    const detalhesCancelamento = `Cancelado pela: ${canceladoPor} | Motivo: ${motivoTipo} | Justificativa: ${justificativaSolicitacao}`;
     const observacao = `Cancelamento aprovado. ${detalhesCancelamento}. Justificativa da autorização: ${justificativaAutorizacao}`;
 
     try {
@@ -549,7 +606,7 @@ const ListaFolhas = () => {
       alert("Cancelamento aprovado com sucesso.");
     } catch (error) {
       console.error("Erro ao aprovar cancelamento:", error);
-      alert("Nao foi possivel aprovar o cancelamento. Tente novamente.");
+      alert("Não foi possível aprovar o cancelamento. Tente novamente.");
     }
   };
 
@@ -563,15 +620,15 @@ const ListaFolhas = () => {
 
     const statusAnterior = obterStatusAnteriorCancelamento(selectedFolha);
     if (!statusAnterior) {
-      alert("Nao foi possivel identificar o status anterior para reverter.");
+      alert("Não foi possível identificar o status anterior para reverter.");
       return;
     }
 
-    const canceladoPor = selectedFolha.cancelado_por || "Nao informado";
-    const motivoTipo = selectedFolha.motivo_cancelamento_tipo || "Nao informado";
-    const justificativaSolicitacao = selectedFolha.motivo_cancelamento || "Nao informado";
-    const detalhesCancelamento = `Cancelado por: ${canceladoPor} | Motivo: ${motivoTipo} | Justificativa: ${justificativaSolicitacao}`;
-    const observacao = `Solicitacao de cancelamento negada. ${detalhesCancelamento}. Justificativa da negativa: ${justificativaNegativa}`;
+    const canceladoPor = selectedFolha.cancelado_por || "Não informado";
+    const motivoTipo = selectedFolha.motivo_cancelamento_tipo || "Não informado";
+    const justificativaSolicitacao = selectedFolha.motivo_cancelamento || "Não informado";
+    const detalhesCancelamento = `Cancelado pela: ${canceladoPor} | Motivo: ${motivoTipo} | Justificativa: ${justificativaSolicitacao}`;
+    const observacao = `Solicitação de cancelamento negada. ${detalhesCancelamento}. Justificativa da negativa: ${justificativaNegativa}`;
 
     try {
       await updateStatus(selectedFolha, statusAnterior, {
@@ -588,7 +645,7 @@ const ListaFolhas = () => {
       alert("Cancelamento negado e status original restaurado.");
     } catch (error) {
       console.error("Erro ao negar cancelamento:", error);
-      alert("Nao foi possivel negar o cancelamento. Tente novamente.");
+      alert("Não foi possível negar o cancelamento. Tente novamente.");
     }
   };
 
@@ -672,7 +729,7 @@ const ListaFolhas = () => {
     URL.revokeObjectURL(url);
   };
 
-  // Fun��o para drag and drop no Kanban
+  // Função para drag and drop no Kanban
   const onDragEnd = async (result) => {
     if (!isAdmin) return;
 
@@ -696,7 +753,7 @@ const ListaFolhas = () => {
       await loadFolhas();
     } catch (error) {
       console.error("Erro ao atualizar status via Kanban:", error);
-      alert("N�o foi poss�vel atualizar o status. Tente novamente.");
+      alert("Não foi possível atualizar o status. Tente novamente.");
       await loadFolhas();
     }
   };
@@ -1069,16 +1126,6 @@ const ListaFolhas = () => {
                   </Card>
                 )}
 
-                {selectedFolha.status_historico && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Histórico</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ListaHistoricoTimeline historico={selectedFolha.status_historico} />
-                    </CardContent>
-                  </Card>
-                )}
 
                 {selectedFolha.equipes?.length > 0 && (
                   <Card>
@@ -1090,12 +1137,13 @@ const ListaFolhas = () => {
                     <CardContent className="space-y-2">
                       {selectedFolha.equipes.map((equipe, index) => (
                         <div key={index} className="rounded bg-blue-50 p-2 text-sm">
-                          <strong>Equipe:</strong> {equipe.codigo_equipe} - <strong>Enc:</strong> {equipe.encarregado}
+                          <strong>Encarregado:</strong> {equipe.encarregado} - <strong>Equipe:</strong> {equipe.codigo_equipe}
                         </div>
                       ))}
                     </CardContent>
                   </Card>
                 )}
+
 
                 {selectedFolha.servicos?.length > 0 && (
                   <Card>
@@ -1108,20 +1156,199 @@ const ListaFolhas = () => {
                       {selectedFolha.servicos.map((servico, index) => (
                         <div key={index} className="flex justify-between rounded bg-green-50 p-2 text-sm">
                           <span>{servico.descricao}</span>
-                          <span>Qtd: {servico.quantidade}</span>
+                          <span>Quantidade: {servico.quantidade}</span>
                         </div>
                       ))}
                     </CardContent>
                   </Card>
                 )}
+
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <PackagePlus className="h-4 w-4 text-blue-600" />
+                      Equipamentos
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <h4 className="flex items-center gap-2 text-sm font-semibold text-green-700">
+                        <TrendingUp className="h-4 w-4" />
+                        Instalados ({equipamentosInstalados.length})
+                      </h4>
+                      {equipamentosInstalados.length > 0 ? (
+                        <div className="mt-2 max-h-40 space-y-2 overflow-y-auto">
+                          {equipamentosInstalados.map((equipamento, index) => (
+                            <div
+                              key={equipamento.id || `equip-inst-${index}`}
+                              className="grid gap-2 rounded border border-green-100 bg-green-50 p-3 text-sm md:grid-cols-2 lg:grid-cols-4"
+                            >
+                              <div>
+                                <strong>Serial:</strong> {equipamento.serial || "-"}
+                              </div>
+                              <div>
+                                <strong>Nº LP:</strong> {equipamento.numero_lp || "-"}
+                              </div>
+                              <div>
+                                <strong>Fabricante:</strong> {equipamento.fabricante || "-"}
+                              </div>
+                              <div>
+                                <strong>Capacidade:</strong> {equipamento.capacidade || "-"}
+                              </div>
+                              <div className="md:col-span-2 lg:col-span-1">
+                                <strong>Data Fabricação:</strong> {equipamento.data_fabricacao || "-"}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-sm text-gray-500">
+                          Nenhum equipamento instalado registrado.
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <h4 className="flex items-center gap-2 text-sm font-semibold text-amber-700">
+                        <TrendingDown className="h-4 w-4" />
+                        Retirados ({equipamentosRetirados.length})
+                      </h4>
+                      {equipamentosRetirados.length > 0 ? (
+                        <div className="mt-2 max-h-40 space-y-2 overflow-y-auto">
+                          {equipamentosRetirados.map((equipamento, index) => (
+                            <div
+                              key={equipamento.id || `equip-ret-${index}`}
+                              className="grid gap-2 rounded border border-amber-100 bg-amber-50 p-3 text-sm md:grid-cols-2 lg:grid-cols-4"
+                            >
+                              <div>
+                                <strong>Serial:</strong> {equipamento.serial || "-"}
+                              </div>
+                              <div>
+                                <strong>Nº LP:</strong> {equipamento.numero_lp || "-"}
+                              </div>
+                              <div>
+                                <strong>Fabricante:</strong> {equipamento.fabricante || "-"}
+                              </div>
+                              <div>
+                                <strong>Capacidade:</strong> {equipamento.capacidade || "-"}
+                              </div>
+                              <div className="md:col-span-2 lg:col-span-1">
+                                <strong>Data Fabricação:</strong> {equipamento.data_fabricacao || "-"}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-sm text-gray-500">
+                          Nenhum equipamento retirado registrado.
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <PackageMinus className="h-4 w-4 text-purple-600" />
+                      Materiais
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <h4 className="flex items-center gap-2 text-sm font-semibold text-green-700">
+                        <TrendingUp className="h-4 w-4" />
+                        Instalados ({materiaisInstalados.length})
+                      </h4>
+                      {materiaisInstalados.length > 0 ? (
+                        <div className="mt-2 max-h-40 space-y-2 overflow-y-auto">
+                          {materiaisInstalados.map((material, index) => (
+                            <div
+                              key={material.id || `mat-inst-${index}`}
+                              className="grid gap-2 rounded border border-green-100 bg-green-50 p-3 text-sm md:grid-cols-2 lg:grid-cols-5"
+                            >
+                              <div className="md:col-span-2">
+                                <strong>Descrição:</strong> {material.descricao || "-"}
+                              </div>
+                              <div>
+                                <strong>Lote:</strong> {material.lote || "-"}
+                              </div>
+                              <div>
+                                <strong>Quantidade:</strong> {material.quantidade ?? "-"}
+                              </div>
+                              {/*<div>
+                                <strong>UMB:</strong> {material.umb || "-"}
+                              </div>
+                              <div className="md:col-span-2">
+                                <strong>Origem:</strong> {material.origem || "-"}
+                              </div>*/}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-sm text-gray-500">
+                          Nenhum material instalado registrado.
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <h4 className="flex items-center gap-2 text-sm font-semibold text-amber-700">
+                        <TrendingDown className="h-4 w-4" />
+                        Retirados ({materiaisRetirados.length})
+                      </h4>
+                      {materiaisRetirados.length > 0 ? (
+                        <div className="mt-2 max-h-40 space-y-2 overflow-y-auto">
+                          {materiaisRetirados.map((material, index) => (
+                            <div
+                              key={material.id || `mat-ret-${index}`}
+                              className="grid gap-2 rounded border border-amber-100 bg-amber-50 p-3 text-sm md:grid-cols-2 lg:grid-cols-5"
+                            >
+                              <div className="md:col-span-2">
+                                <strong>Descrição:</strong> {material.descricao || "-"}
+                              </div>
+                              <div>
+                                <strong>Lote:</strong> {material.lote || "-"}
+                              </div>
+                              <div>
+                                <strong>Quantidade:</strong> {material.quantidade ?? "-"}
+                              </div>
+                              {/*<div>
+                                <strong>UMB:</strong> {material.umb || "-"}
+                              </div>
+                              {/*<div className="md:col-span-2">
+                                <strong>Destino:</strong> {material.destino || material.origem || "-"}
+                              </div>*/}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-sm text-gray-500">
+                          Nenhum material retirado registrado.
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/*{selectedFolha.status_historico && (*/}
+                {historicoCompleto.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Histórico</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {/*<ListaHistoricoTimeline historico={selectedFolha.status_historico} />*/}
+                      <ListaHistoricoTimeline historico={historicoCompleto} />
+                    </CardContent>
+                  </Card>
+                )}
+
               </div>
             )}
           </DialogContent>
         </Dialog>
-
-        {/* Mantenha todos os outros modais existentes (showAutorizacaoCancelamentoModal, showEnvioModal, showRetornoModal, showPagamentoModal, showCancelamentoModal, showValidacaoModal, showNaoValidacaoModal) */}
-        {/* ... (código dos modais existentes permanece igual) */}
-
         <Dialog
           open={showAutorizacaoCancelamentoModal}
           onOpenChange={(open) => {

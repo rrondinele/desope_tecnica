@@ -310,22 +310,22 @@ const handleNext = () => {
         minutosInicio === null ||
         minutosFim === null
       ) {
-        alert("Informe horArios vAlidos (HH:MM) para acionamento, inAcio e fim.");
+        alert("Informe horários válidos (HH:MM) para acionamento, início e fim.");
         return;
       }
 
       if (minutosAcionada >= minutosInicio || minutosAcionada >= minutosFim) {
-        alert("A Hora Acionada deve ser anterior A  Hora InAcio e A  Hora Fim.");
+        alert("A Hora Acionada deve ser anterior A  Hora Início e A  Hora Fim.");
         return;
       }
 
       if (minutosInicio <= minutosAcionada || minutosInicio >= minutosFim) {
-        alert("A Hora InAcio deve ser posterior A  Hora Acionada e anterior A  Hora Fim.");
+        alert("A Hora Início deve ser posterior A  Hora Acionada e anterior A  Hora Fim.");
         return;
       }
 
       if (minutosFim <= minutosInicio || minutosFim <= minutosAcionada) {
-        alert("A Hora Fim deve ser posterior A  Hora Acionada e A  Hora InAcio.");
+        alert("A Hora Fim deve ser posterior A  Hora Acionada e A  Hora Início.");
         return;
       }
 
@@ -336,7 +336,7 @@ const handleNext = () => {
       }
 
       if (!numeroFmRaw.startsWith("FM -")) {
-        alert("O nAomero da Folha de Medição deve começar com 'FM -'.");
+        alert("O número da Folha de Medição deve começar com 'FM -'.");
         return;
       }
 
@@ -413,7 +413,7 @@ const handleNext = () => {
       if (missingFields.length > 0) {
         setFormErrors(missingFields);
         setCurrentStep(1);
-        alert("Preencha os campos obrigatorios: " + missingFields.join(", "));
+        alert("Preencha os campos obrigatórios: " + missingFields.join(", "));
         setIsSaving(false);
         return;
       }
@@ -440,7 +440,7 @@ const handleNext = () => {
               status: "rascunho",
               data: new Date().toISOString(),
               usuario: usuarioAtual,
-              observacoes: "Status retornado para rascunho apos edicao",
+              observacoes: "Status retornado para rascunho após edição",
             },
           ];
         }
@@ -456,9 +456,9 @@ const handleNext = () => {
 
       try {
         if (hasSupabase()) {
-          alert("Folha salva com sucesso no Supabase!");
+          alert("Folha salva com sucesso!");
         } else {
-          alert("Folha salva com sucesso no armazenamento local (Supabase desativado).");
+          alert("Folha salva com sucesso no armazenamento local (Banco de Dados desativado).");
         }
       } catch {}
 
@@ -473,7 +473,7 @@ const handleNext = () => {
       navigate(createPageUrl("ListaFolhas"));
     } catch (error) {
       console.error("Erro ao salvar folha:", error);
-      const fallbackMessage = error?.message || "Erro ao salvar a folha. Verifique os campos obrigatorios e tente novamente.";
+      const fallbackMessage = error?.message || "Erro ao salvar a folha. Verifique os campos obrigatórios e tente novamente.";
       setFormErrors([fallbackMessage]);
       alert(fallbackMessage);
     } finally {
@@ -554,7 +554,7 @@ const handleNext = () => {
 
         {formErrors.length > 0 && (
           <Alert variant="destructive" className="mt-6">
-            <AlertTitle>Revise os campos obrigatorios</AlertTitle>
+            <AlertTitle>Revise os campos obrigatórios</AlertTitle>
             <AlertDescription>
               <ul className="list-disc pl-5 space-y-1">
                 {formErrors.map((item) => (
