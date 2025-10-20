@@ -160,17 +160,46 @@ const normalizeTrimmed = (value) => {
   return String(value).trim();
 };
 
+const determineProcessSuffix = (folha) => {
+  const equipes = Array.isArray(folha?.equipes) ? folha.equipes : [];
+  let fallbackSuffix = "";
+
+  for (const team of equipes) {
+    const codigo = normalizeTrimmed(team?.codigo_equipe);
+    if (!codigo) {
+      continue;
+    }
+
+    if (/^LV/i.test(codigo)) {
+      return "LV";
+    }
+
+    if (/^(EX|MT)/i.test(codigo)) {
+      fallbackSuffix = "LM";
+    }
+  }
+
+  return fallbackSuffix;
+};
+
 const fillHeadMapping = (sheet, folha) => {
   const context = { data: folha };
   const priorityMappings = Array.isArray(headMapping.__priorityMappings)
     ? headMapping.__priorityMappings
     : [];
+  const processSuffix = determineProcessSuffix(folha);
 
   Object.entries(headMapping).forEach(([path, cellRef]) => {
     if (path.startsWith("__") || typeof cellRef !== "string") {
       return;
     }
-    const value = getValueFromPath(context, path);
+    let value = getValueFromPath(context, path);
+
+    if (path === "data.tipo_processo" && processSuffix) {
+      const trimmedProcess = normalizeTrimmed(value);
+      value = trimmedProcess ? `${trimmedProcess} (${processSuffix})` : processSuffix;
+    }
+
     setSheetValue(sheet, cellRef, value, path);
   });
 
