@@ -125,6 +125,21 @@ export default function NovaFolha() {
     data_pagamento: null,
     numero_pagamento: '',
   });
+  const [editingId, setEditingId] = useState(null);
+  const [originalFolha, setOriginalFolha] = useState(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isEditPanelVisible, setIsEditPanelVisible] = useState(false);
+
+  const editingQueryId = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('editId');
+  }, [location.search]);
+
+  const isEditingMode = Boolean(editingQueryId || editingId);
+
+  useEffect(() => {
+    setIsEditPanelVisible(isEditingMode);
+  }, [isEditingMode]);
 
   useEffect(() => {
     if (draftLoaded) {
@@ -175,7 +190,7 @@ export default function NovaFolha() {
   }, [formData, draftLoaded]);
 
   const steps = [
-    { number: 1, title: "Dados Gerais", description: "Informações da obra" },
+    { number: 1, title: "Dados Gerais", description: "Informações gerais da obra" },
     { number: 2, title: "Equipes", description: "Equipes envolvidas" },
     { number: 3, title: "Serviços", description: "Serviços executados" },
     { number: 4, title: "Equipamentos", description: "Instalados/retirados" },
@@ -184,6 +199,8 @@ export default function NovaFolha() {
   ];
 
   const loadFolhaParaClonar = useCallback(async (id) => {
+    setEditingId(null);
+    setOriginalFolha(null);
     try {
       const folhaOriginal = await FolhaMedicao.get(id);
       const novaFolhaData = {
@@ -209,11 +226,14 @@ export default function NovaFolha() {
   }, []);
 
   const loadFolhaParaEdicao = useCallback(async (id, stepNumber) => {
+    setEditingId(id);
     try {
       const folhaExistente = await FolhaMedicao.get(id);
 
       if (!folhaExistente) {
-        alert("Folha não encontrada para edição.");
+        alert("Folha nao encontrada para edicao.");
+        setEditingId(null);
+        setOriginalFolha(null);
         navigate(createPageUrl("ListaFolhas"));
         return;
       }
@@ -229,6 +249,8 @@ export default function NovaFolha() {
         status_historico: folhaExistente.status_historico || [],
       };
 
+      setOriginalFolha(folhaExistente);
+      setEditingId(folhaExistente.id);
       setFormData((prev) => ({
         ...prev,
         ...normalizada,
@@ -236,7 +258,9 @@ export default function NovaFolha() {
       setCurrentStep(stepNumber);
     } catch (error) {
       console.error("Erro ao carregar folha para ediAAo:", error);
-      alert("Não foi possAvel carregar a folha para edição.");
+      alert("Nao foi possivel carregar a folha para edicao.");
+      setEditingId(null);
+      setOriginalFolha(null);
       navigate(createPageUrl("ListaFolhas"));
     }
   }, [navigate]);
@@ -255,12 +279,14 @@ export default function NovaFolha() {
     } else if (cloneId) {
       loadFolhaParaClonar(cloneId);
     } else {
+      setEditingId(null);
+      setOriginalFolha(null);
       setFormData((prev) => ({ ...prev, numero_fm: prev.numero_fm || 'FM - ' }));
     }
   }, [location.search, loadFolhaParaClonar, loadFolhaParaEdicao, steps.length]);
   
   useEffect(() => {
-    const prefix = formData.tipo_processo === 'Manutenção' ? 'OMI-' : 'OII-';
+    const prefix = formData.tipo_processo === 'ManutenAAo' ? 'OMI-' : 'OII-';
     if (!formData.projeto?.startsWith(prefix)) {
         const currentSuffix = formData.projeto?.replace(/^(OII-|OMI-)/, '') || '';
         setFormData(prev => ({ ...prev, projeto: `${prefix}${currentSuffix}` }));
@@ -271,33 +297,33 @@ const handleNext = () => {
   if (currentStep === 1) {
     const missing = [];
     const req = [
-      ['tecnico_light','Técnico Light'],
+      ['tecnico_light','TAcnico Light'],
       ['data_obra','Data da Obra'],
       ['hora_acionada','Hora Acionada'],
-      ['hora_inicio','Hora Início'],
+      ['hora_inicio','Hora InAcio'],
       ['hora_fim','Hora Fim'],
-      ['endereco','Endereço Completo'],
-      ['municipio','Município'],
-      ['tipo_processo','Tipo de Processo'], // ← Adicionar esta linha
-      ['caracteristica','Característica'], // ← Adicionar esta linha
+      ['endereco','EndereAo Completo'],
+      ['municipio','MunicApio'],
+      ['tipo_processo','Tipo de Processo'], // a Adicionar esta linha
+      ['caracteristica','CaracterAstica'], // a Adicionar esta linha
     ];
     req.forEach(([k,label]) => { if (!formData[k]) missing.push(label); });
     
-    // Validação para Dados do Processo - APÓS validar campos básicos
-    if (!missing.length) { // Só validar projeto/OS se os campos básicos estiverem ok
+    // ValidaAAo para Dados do Processo - APAS validar campos bAsicos
+    if (!missing.length) { // SA validar projeto/OS se os campos bAsicos estiverem ok
       if (formData.caracteristica === 'Programada') {
         if (!formData.projeto || formData.projeto === 'OII-' || formData.projeto === 'OMI-') {
           missing.push('Projeto');
         }
       } else if (formData.caracteristica === 'Emergencial') {
         if (!formData.ordem_servico || formData.ordem_servico.trim() === '') {
-          missing.push('Ordem de Serviço');
+          missing.push('Ordem de ServiAo');
         }
       }
     }
 
     if (missing.length) {
-      alert(`Preencha os campos obrigatórios:\n- ${missing.join('\n- ')}`);
+      alert(`Preencha os campos obrigatArios:\n- ${missing.join('\n- ')}`);
       return;
     }
 
@@ -310,39 +336,39 @@ const handleNext = () => {
         minutosInicio === null ||
         minutosFim === null
       ) {
-        alert("Informe horários válidos (HH:MM) para acionamento, início e fim.");
+        alert("Informe horArios vAlidos (HH:MM) para acionamento, inAcio e fim.");
         return;
       }
 
       if (minutosAcionada >= minutosInicio || minutosAcionada >= minutosFim) {
-        alert("A Hora Acionada deve ser anterior A  Hora Início e A  Hora Fim.");
+        alert("A Hora Acionada deve ser anterior A  Hora InAcio e A  Hora Fim.");
         return;
       }
 
       if (minutosInicio <= minutosAcionada || minutosInicio >= minutosFim) {
-        alert("A Hora Início deve ser posterior A  Hora Acionada e anterior A  Hora Fim.");
+        alert("A Hora InAcio deve ser posterior A  Hora Acionada e anterior A  Hora Fim.");
         return;
       }
 
       if (minutosFim <= minutosInicio || minutosFim <= minutosAcionada) {
-        alert("A Hora Fim deve ser posterior A  Hora Acionada e A  Hora Início.");
+        alert("A Hora Fim deve ser posterior A  Hora Acionada e A  Hora InAcio.");
         return;
       }
 
       const numeroFmRaw = (formData.numero_fm || "").toUpperCase().trim();
       if (!numeroFmRaw || /^FM\s*-\s*$/.test(numeroFmRaw)) {
-        alert("Informe o número da Folha de Medição (exemplo: FM - 10.123).");
+        alert("Informe o nAmero da Folha de MediAAo (exemplo: FM - 10.123).");
         return;
       }
 
       if (!numeroFmRaw.startsWith("FM -")) {
-        alert("O número da Folha de Medição deve começar com 'FM -'.");
+        alert("O nAmero da Folha de MediAAo deve comeAar com 'FM -'.");
         return;
       }
 
       const numeroSemPrefixo = numeroFmRaw.replace(/^FM\s*-\s*/i, "");
       if (!/^\d{2}\.\d{3}$/.test(numeroSemPrefixo)) {
-        alert("O número da Folha de Medição deve seguir o formato 'FM - XX.XXX'.");
+        alert("O nAmero da Folha de MediAAo deve seguir o formato 'FM - XX.XXX'.");
         return;
       }
 
@@ -350,7 +376,7 @@ const handleNext = () => {
       const expectedPrefix = NUMERO_FM_PREFIX_MAP[regionalKey]?.[formData.tipo_processo];
       if (expectedPrefix && !numeroSemPrefixo.startsWith(expectedPrefix)) {
         alert(
-          `Para a base ${regionalKey} em ${formData.tipo_processo}, o número deve começar com '${expectedPrefix}' (exemplo: FM - ${expectedPrefix}123).`
+          `Para a base ${regionalKey} em ${formData.tipo_processo}, o nAmero deve comeAar com '${expectedPrefix}' (exemplo: FM - ${expectedPrefix}123).`
         );
         return;
       }
@@ -364,7 +390,7 @@ const handleNext = () => {
 
         if (!temEquipamento) {
           const continuar = window.confirm(
-            "Tem certeza que não existe nenhum equipamento instalado e/ou retirado?"
+            "Tem certeza que nAo existe nenhum equipamento instalado e/ou retirado?"
           );
           if (!continuar) return;
         }
@@ -377,7 +403,7 @@ const handleNext = () => {
 
         if (!temMaterial) {
           const continuar = window.confirm(
-            "Tem certeza que não existe nenhum material instalado e/ou retirado?"
+            "Tem certeza que nAo existe nenhum material instalado e/ou retirado?"
           );
           if (!continuar) return;
         }
@@ -394,11 +420,81 @@ const handleNext = () => {
     setFormData(prev => ({ ...prev, ...newData }));
   };
 
+  const handleCancelEditing = async () => {
+    const editTargetId = editingId || editingQueryId;
+    if (!editTargetId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Tem certeza que deseja cancelar a edicao? Nenhuma alteracao sera salva.",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setIsCancelling(true);
+    try {
+      const historicoAnterior = Array.isArray(originalFolha?.status_historico)
+        ? originalFolha.status_historico
+        : Array.isArray(formData.status_historico)
+          ? formData.status_historico
+          : [];
+
+      const usuarioAtual =
+        profile?.full_name ||
+        profile?.email ||
+        session?.user?.email ||
+        session?.user?.user_metadata?.full_name ||
+        "sistema";
+
+      const updatedHistory = [
+        ...historicoAnterior,
+        {
+          status: "edicao_cancelada",
+          data: new Date().toISOString(),
+          usuario: usuarioAtual,
+          observacoes: "Edicao cancelada pelo usuario antes de salvar.",
+        },
+      ];
+
+      const statusAtual = originalFolha?.status ?? formData.status ?? "rascunho";
+
+      await FolhaMedicao.update(editTargetId, {
+        status: statusAtual,
+        status_historico: updatedHistory,
+      });
+
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+        }
+      } catch {}
+
+      alert("Edicao cancelada. Nenhuma alteracao foi salva.");
+      setEditingId(null);
+      setOriginalFolha(null);
+      setIsEditPanelVisible(false);
+      navigate(createPageUrl("ListaFolhas"));
+    } catch (error) {
+      console.error("Erro ao Cancelar Edicao da folha:", error);
+      alert("Nao foi possivel cancelar a edicao. Tente novamente.");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const handleSave = async (payload) => {
     setIsSaving(true);
     try {
       const cleanedPayload = { ...payload };
       const wasAwaitingCorrection = cleanedPayload.status === "aguardando_correcao";
+      const effectiveEditingId = editingId || editingQueryId;
+      const isEditing = Boolean(effectiveEditingId);
+
+      if (isEditing) {
+        cleanedPayload.id = effectiveEditingId;
+      }
 
       cleanedPayload.numero_fm = cleanedPayload.numero_fm ? cleanedPayload.numero_fm.trim() : cleanedPayload.numero_fm;
       Object.keys(cleanedPayload).forEach((key) => {
@@ -413,7 +509,7 @@ const handleNext = () => {
       if (missingFields.length > 0) {
         setFormErrors(missingFields);
         setCurrentStep(1);
-        alert("Preencha os campos obrigatórios: " + missingFields.join(", "));
+        alert("Preencha os campos obrigatArios: " + missingFields.join(", "));
         setIsSaving(false);
         return;
       }
@@ -440,12 +536,18 @@ const handleNext = () => {
               status: "rascunho",
               data: new Date().toISOString(),
               usuario: usuarioAtual,
-              observacoes: "Status retornado para rascunho após edição",
+              observacoes: "Status retornado para rascunho apAs ediAAo",
             },
           ];
         }
         await FolhaMedicao.update(cleanedPayload.id, cleanedPayload);
       } else {
+        if (isEditing) {
+          alert("Nao e possivel criar uma nova folha enquanto estiver editando uma existente. Volte a lista e tente novamente.");
+          setIsSaving(false);
+          return;
+        }
+
         const createdBy = {
           created_by_user_id: session?.user?.id || null,
           created_by_matricula: profile?.matricula || null,
@@ -473,7 +575,7 @@ const handleNext = () => {
       navigate(createPageUrl("ListaFolhas"));
     } catch (error) {
       console.error("Erro ao salvar folha:", error);
-      const fallbackMessage = error?.message || "Erro ao salvar a folha. Verifique os campos obrigatórios e tente novamente.";
+      const fallbackMessage = error?.message || "Erro ao salvar a folha. Verifique os campos obrigatArios e tente novamente.";
       setFormErrors([fallbackMessage]);
       alert(fallbackMessage);
     } finally {
@@ -538,15 +640,36 @@ const handleNext = () => {
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 flex items-center gap-2">
-              <FileText className="w-8 h-8 text-blue-600" />
-              Nova Folha de Medição
-            </h1>
-            <p className="text-slate-600 mt-1">
-              Siga as etapas para cadastrar uma nova folha de medição.
-            </p>
+        <div className="relative mb-6 md:mb-8">
+          {isEditingMode && (
+            <div
+              className={`pointer-events-auto absolute left-1/2 -translate-x-1/2 transition-all duration-300 ease-out z-10 ${
+                isEditPanelVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-6 pointer-events-none"
+              }`}
+              style={{ top: "-1.75rem" }}
+            >
+              <div className="w-full max-w-[14rem] sm:max-w-[16rem] border-2 border-blue-500 bg-white shadow-md rounded-3xl px-5 py-2.5 flex justify-center">
+                <Button
+                  onClick={handleCancelEditing}
+                  disabled={isSaving || isCancelling || !isEditingMode}
+                  className="w-full flex items-center justify-center gap-2 rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-[1.01] hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500 disabled:opacity-60 disabled:hover:scale-100"
+                >
+                  {isCancelling ? "Cancelando..." : "Cancelar Edicão"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className={`flex items-center gap-4 ${isEditingMode ? "pt-10" : ""}`}>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 flex items-center gap-2">
+                <FileText className="w-8 h-8 text-blue-600" />
+                {isEditingMode ? "Editar Folha de Medicão" : "Nova Folha de Medicão"}
+              </h1>
+              <p className="text-slate-600 mt-1">
+                {isEditingMode ? "Revise os dados e atualize a folha de medicao selecionada." : "Siga as etapas para cadastrar uma nova folha de medicao."}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -554,7 +677,7 @@ const handleNext = () => {
 
         {formErrors.length > 0 && (
           <Alert variant="destructive" className="mt-6">
-            <AlertTitle>Revise os campos obrigatórios</AlertTitle>
+            <AlertTitle>Revise os campos obrigatArios</AlertTitle>
             <AlertDescription>
               <ul className="list-disc pl-5 space-y-1">
                 {formErrors.map((item) => (
@@ -583,7 +706,7 @@ const handleNext = () => {
             <Button
               variant="ghost"
               onClick={handlePrevious}
-              disabled={currentStep === 1}
+              disabled={currentStep === 1 || isCancelling}
               className="pointer-events-auto flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-lg ring-1 ring-slate-900/5 transition-all hover:bg-slate-100 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -598,7 +721,7 @@ const handleNext = () => {
             {currentStep === steps.length ? (
               <Button
                 onClick={handleFinalSave}
-                disabled={isSaving}
+                disabled={isSaving || isCancelling}
                 className="pointer-events-auto flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-blue-700 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 {isSaving ? "Salvando..." : "Salvar e Concluir"}
@@ -607,7 +730,7 @@ const handleNext = () => {
             ) : (
               <Button
                 onClick={handleNext}
-                disabled={isNextDisabled}
+                disabled={isNextDisabled || isCancelling}
                 className="pointer-events-auto flex items-center gap-2 rounded-full bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-slate-900 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 Próximo
@@ -620,3 +743,4 @@ const handleNext = () => {
     </div>
   );
 }
+

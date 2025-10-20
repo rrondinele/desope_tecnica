@@ -5,7 +5,7 @@
     "codigo_mestre": "G16",
     "unidade": "H16",
     "dispendio": "I16",
-    "valor_unit": "J16",
+    "valor_unitario": "J16",
     "quantidade": "K16",
     "valor_total": "L16",
     "observacao": "M16"

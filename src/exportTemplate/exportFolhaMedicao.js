@@ -329,6 +329,22 @@ const applyMappingsToSheet = (sheet, folha) => {
     {
       formatters: {
         data_fabricacao: (_, item) => {
+          const data = item?.data_fabricacao;
+          if (data) {
+            const parsed = parseLocalDateLike(data);
+            if (parsed instanceof Date && !Number.isNaN(parsed.getTime())) {
+              return format(parsed, "MM/yyyy");
+            }
+            const raw = String(data).trim();
+            if (raw) {
+              // Tenta suportar formatos como YYYY-MM ou YYYY-MM-DD
+              const isoLike = raw.match(/^(\d{4})-(\d{2})(?:-(\d{2}))?$/);
+              if (isoLike) {
+                return `${isoLike[2]}/${isoLike[1]}`;
+              }
+              return raw;
+            }
+          }
           const mes = item?.mes_fabricacao
             ? String(item.mes_fabricacao).padStart(2, "0")
             : "";
@@ -351,6 +367,21 @@ const applyMappingsToSheet = (sheet, folha) => {
     {
       formatters: {
         data_fabricacao: (_, item) => {
+          const data = item?.data_fabricacao;
+          if (data) {
+            const parsed = parseLocalDateLike(data);
+            if (parsed instanceof Date && !Number.isNaN(parsed.getTime())) {
+              return format(parsed, "MM/yyyy");
+            }
+            const raw = String(data).trim();
+            if (raw) {
+              const isoLike = raw.match(/^(\d{4})-(\d{2})(?:-(\d{2}))?$/);
+              if (isoLike) {
+                return `${isoLike[2]}/${isoLike[1]}`;
+              }
+              return raw;
+            }
+          }
           const mes = item?.mes_fabricacao
             ? String(item.mes_fabricacao).padStart(2, "0")
             : "";

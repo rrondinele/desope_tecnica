@@ -30,19 +30,35 @@ const allNavLinks = [
 ];
 
 // Componente para o item do menu, para manter o código limpo
-const NavItem = ({ link, pathname }) => {
+const NavItem = ({ link, pathname, disabled = false, onBlockedNavigate }) => {
   const Icon = iconMap[link.icon];
   const isActive = pathname === link.href;
+  const baseClasses = "flex items-center gap-3 rounded-lg p-3 text-sm font-medium transition-all duration-200";
+  const disabledClasses = "cursor-not-allowed opacity-60";
+  const activeClasses = "bg-blue-50 text-blue-700";
+  const inactiveClasses = "text-gray-600 hover:bg-gray-100 hover:text-gray-900";
+
+  const handleClick = (event) => {
+    if (!disabled) {
+      return;
+    }
+    event.preventDefault();
+    if (typeof onBlockedNavigate === "function") {
+      onBlockedNavigate();
+    }
+  };
 
   return (
     <li>
       <Link
         to={link.href}
-        className={`flex items-center gap-3 rounded-lg p-3 text-sm font-medium transition-all duration-200 ${
-          isActive
-            ? "bg-blue-50 text-blue-700"
-            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-        }`}
+        onClick={handleClick}
+        tabIndex={disabled ? -1 : 0}
+        aria-disabled={disabled}
+        className={[
+          baseClasses,
+          disabled ? disabledClasses : isActive ? activeClasses : inactiveClasses,
+        ].join(" ")}
       >
         {Icon && <Icon className="h-5 w-5" />}
         <span>{link.name}</span>
@@ -56,6 +72,20 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { profile } = useAuth();
+
+  const isEditingFolha = React.useMemo(() => {
+    if (location.pathname !== "/nova-folha") {
+      return false;
+    }
+    const params = new URLSearchParams(location.search || "");
+    return params.has("editId");
+  }, [location.pathname, location.search]);
+
+  const blockedNavigationMessage =
+    "Finalize a edição da folha clicando em 'Salvar e Concluir' para sair desta tela.";
+  const handleBlockedNavigation = React.useCallback(() => {
+    alert(blockedNavigationMessage);
+  }, [blockedNavigationMessage]);
 
   const navLinks = allNavLinks.filter(link => 
     profile?.role && link.roles.includes(profile.role)
@@ -88,7 +118,16 @@ export default function Layout() {
           </div>
           <ul className="flex flex-col gap-1">
             {navLinks.map((link) => (
-              <NavItem key={link.name} link={link} pathname={location.pathname} />
+              <NavItem
+                key={link.name}
+                link={link}
+                pathname={location.pathname}
+                disabled={
+                  isEditingFolha &&
+                  (link.href === "/nova-folha" || link.href === "/lista-folhas")
+                }
+                onBlockedNavigate={handleBlockedNavigation}
+              />
             ))}
           </ul>
         </div>

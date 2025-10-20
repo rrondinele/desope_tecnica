@@ -203,7 +203,7 @@ export default function DashboardFinanceiro() {
     {
       title: "Em Análise",
       value: (kpisFinanceiros.valorAguardandoAprovacao || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-      subtitle: "Aguardando aprovação",
+      subtitle: "Aguardando aprovação LIGHT",
       icon: Send,
       color: "text-blue-600",
       bgColor: "bg-blue-50"
