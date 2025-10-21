@@ -448,4 +448,3 @@ export const exportFolhaMedicao = async (folha, fileName) => {
 };
 
 export { fetchTemplateWorkbook, downloadWorkbook };
-

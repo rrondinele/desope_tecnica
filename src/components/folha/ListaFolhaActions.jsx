@@ -67,7 +67,10 @@ const FolhaActions = ({
         </Button>
       )}
 
-      {!canValidate && folha.status === "aguardando_correcao" && (
+      {(
+        (!canValidate && folha.status === "aguardando_correcao") ||
+        (isBackoffice && folha.status === "rascunho")
+      ) && (
         <Button
           variant="outline"
           size="icon"

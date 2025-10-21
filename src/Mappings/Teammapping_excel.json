@@ -1,8 +1,9 @@
 {
   "equipes": {
-    "codigo_equipe": "C28",
+    "codigo_equipe": "C33",
     "encarregado": "C10",
-    "motorista": "C29",
-    "eletricistas": "C30"
+    "motorista": "C34",
+    "eletricistas": "C35",
+    "supervisor": "J61"
   }
 }
