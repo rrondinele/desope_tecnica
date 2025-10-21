@@ -1588,7 +1588,7 @@ const ListaFolhas = () => {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-semibold">Cancelado por *</label>
+                <label className="mb-2 block text-sm font-semibold">Cancelada pela *</label>
                 <Select
                   value={cancelamentoData.cancelado_por}
                   onValueChange={(value) =>
