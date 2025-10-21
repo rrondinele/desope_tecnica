@@ -539,7 +539,7 @@ const ListaFolhas = () => {
       const statusFinalCancelamento =
         STATUS_CANCELAMENTO_BY_ORIGEM[cancelamentoData.cancelado_por] || "cancelado_distribuidora";
       const novoStatus = solicitacaoPendente ? "aguardando_cancelamento" : statusFinalCancelamento;
-      const detalhesCancelamento = `Cancelado por: ${cancelamentoData.cancelado_por} | Motivo: ${cancelamentoData.motivo_cancelamento_tipo} | Justificativa: ${cancelamentoData.motivo_cancelamento}`;
+      const detalhesCancelamento = `Cancelada pela: ${cancelamentoData.cancelado_por} | Motivo: ${cancelamentoData.motivo_cancelamento_tipo} | Justificativa: ${cancelamentoData.motivo_cancelamento}`;
       const mensagemObservacao = solicitacaoPendente
         ? `Cancelamento solicitado. ${detalhesCancelamento}`
         : `Folha cancelada. ${detalhesCancelamento}`;
