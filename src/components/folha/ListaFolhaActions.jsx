@@ -27,6 +27,7 @@ const FolhaActions = ({
   onAutorizarCancelamento,
   canValidate,
   isBackoffice = false,
+  isVisitor = false,
 }) => {
   if (!folha) return null;
 
@@ -56,7 +57,7 @@ const FolhaActions = ({
         <Eye className="w-4 h-4 text-blue-600" />
       </Button>
 
-      {canValidate && folha.status === "rascunho" && (
+      {!isVisitor && canValidate && folha.status === "rascunho" && (
         <Button
           variant="outline"
           size="icon"
@@ -67,7 +68,7 @@ const FolhaActions = ({
         </Button>
       )}
 
-      {(
+      {!isVisitor && (
         (!canValidate && folha.status === "aguardando_correcao") ||
         (isBackoffice && folha.status === "rascunho")
       ) && (
@@ -81,7 +82,7 @@ const FolhaActions = ({
         </Button>
       )}
 
-      {folha.status === "pendente" && !canValidate && (
+      {!isVisitor && folha.status === "pendente" && !canValidate && (
         <Button
           variant="outline"
           size="icon"
@@ -92,7 +93,7 @@ const FolhaActions = ({
         </Button>
       )}
 
-      {folha.status === "aguardando_aprovacao" && (
+      {!isVisitor && folha.status === "aguardando_aprovacao" && (
         <Button
           variant="outline"
           size="icon"
@@ -103,7 +104,7 @@ const FolhaActions = ({
         </Button>
       )}
 
-      {folha.status === "aprovado" && canValidate && (
+      {!isVisitor && folha.status === "aprovado" && canValidate && (
         <Button
           variant="outline"
           size="icon"
@@ -114,7 +115,7 @@ const FolhaActions = ({
         </Button>
       )}
 
-      {isBackoffice &&
+      {!isVisitor && isBackoffice &&
         ['pendente', 'aguardando_aprovacao'].includes(folha.status) && (
         <Button
           variant="outline"
@@ -126,7 +127,7 @@ const FolhaActions = ({
         </Button>
       )}
 
-      {folha.status === "aguardando_cancelamento" && !isBackoffice && (
+      {!isVisitor && folha.status === "aguardando_cancelamento" && !isBackoffice && (
         <Button
           variant="outline"
           size="icon"

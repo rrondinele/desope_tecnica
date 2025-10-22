@@ -23,7 +23,7 @@ const iconMap = {
 const allNavLinks = [
   { name: "Cadastro de Serviços", href: "/cadastro", icon: "Cadastro", roles: ['admin'] },
   { name: "Nova Folha de Medição", href: "/nova-folha", icon: "NovaFolha", roles: ['backoffice', 'supervisor', 'admin'] },
-  { name: "Lista de Folhas", href: "/lista-folhas", icon: "ListaFolhas", roles: ['backoffice', 'supervisor', 'admin'] },
+  { name: "Lista de Folhas", href: "/lista-folhas", icon: "ListaFolhas", roles: ['backoffice', 'supervisor', 'admin', 'visitante'] },
   { name: "Dashboard Operacional", href: "/dashboard", icon: "Dashboard", roles: ['supervisor', 'admin'] },
   { name: "Dashboard Financeiro", href: "/dashboard-financeiro", icon: "DashboardFinanceiro", roles: ['supervisor', 'admin'] },
   { name: "Gerenciar Usuários", href: "/admin/users", icon: "AdminUsers", roles: ['admin'] },

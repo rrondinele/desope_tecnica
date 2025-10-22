@@ -235,6 +235,7 @@ const ListaFolhas = () => {
 
   const canValidate = useMemo(() => profile?.role === 'supervisor', [profile]);
   const isBackoffice = useMemo(() => profile?.role === 'backoffice', [profile]);
+  const isVisitor = useMemo(() => profile?.role === 'visitante', [profile]);
   const isAdmin = useMemo(() => profile?.role === 'admin', [profile]);
 
   const loadFolhas = useCallback(async () => {
@@ -961,6 +962,7 @@ const ListaFolhas = () => {
                                 folha={folha}
                                 canValidate={canValidate}
                                 isBackoffice={isBackoffice}
+                                isVisitor={isVisitor}
                                 isExporting={exportingFolhaId === folha.id}
                                 onExport={handleExportToTemplate}
                                 onView={(item) => {

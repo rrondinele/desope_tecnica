@@ -16,6 +16,7 @@ const RoleBasedRedirect = () => {
     case 'supervisor':
       return <Navigate to="/dashboard" replace />;
     case 'backoffice':
+    case 'visitante':
       return <Navigate to="/lista-folhas" replace />;
     default:
       // Se não houver perfil (usuário deslogado), volta para o login.

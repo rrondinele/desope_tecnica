@@ -53,7 +53,7 @@ export default function App() {
         <Route path="cadastro" element={<ProtectedRoute allowedRoles={['admin']}><Cadastro /></ProtectedRoute>} />
         <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="nova-folha" element={<ProtectedRoute allowedRoles={['backoffice', 'supervisor', 'admin']}><NovaFolha /></ProtectedRoute>} />
-        <Route path="lista-folhas" element={<ProtectedRoute allowedRoles={['backoffice', 'supervisor', 'admin']}><ListaFolhas /></ProtectedRoute>} />
+        <Route path="lista-folhas" element={<ProtectedRoute allowedRoles={['backoffice', 'supervisor', 'admin', 'visitante']}><ListaFolhas /></ProtectedRoute>} />
         <Route path="dashboard-financeiro" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><DashboardFinanceiro /></ProtectedRoute>} />
         <Route path="admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminPage /></ProtectedRoute>} />
       </Route>
