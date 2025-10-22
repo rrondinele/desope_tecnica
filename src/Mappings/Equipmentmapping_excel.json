@@ -1,13 +1,14 @@
 {
   "equipamentosInstalados": {
-    "serial": "K39",
+    "serial": "K42",
     "numero_lp": "K41",
     "fabricante": "K40",
     "capacidade": "K39",
     "data_fabricacao": "K43"
   },
+  
   "equipamentosRetirados": {
-    "serial": "L39",
+    "serial": "L42",
     "numero_lp": "L41",
     "fabricante": "L40",
     "capacidade": "L39",
