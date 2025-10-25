@@ -1,12 +1,13 @@
 import { format, differenceInBusinessDays } from "date-fns";
 import { FolhaMedicao } from "@/entities/FolhaMedicao";
 import { addBusinessDays, parseLocalDate } from "@/utils/listafolhaUtils";
+import { notifyFolhaStatusChange } from "@/lib/notifications";
 
 export const validarEnvioFolha = (envioData) => {
   if (!envioData?.metodo_envio) {
     return {
       ok: false,
-      message: "Por favor, selecione o método de envio.",
+      message: "Por favor, selecione o mÃ©todo de envio.",
     };
   }
 
@@ -32,9 +33,18 @@ export const getPrazoStatus = (folha) => {
   return "outros";
 };
 
+const buildActorContext = (profile) => ({
+  actorEmail:
+    profile?.email ||
+    profile?.user?.email ||
+    profile?.user?.user_metadata?.email ||
+    null,
+  actorRole: profile?.role || null,
+});
+
 export const updateStatus = async (folha, novoStatus, extraData = {}, profile = null) => {
   if (!folha?.id) {
-    throw new Error("Folha inválida para atualização de status");
+    throw new Error("Folha invÃ¡lida para atualizaÃ§Ã£o de status");
   }
 
   const historicoAnterior = Array.isArray(folha.status_historico)
@@ -57,14 +67,27 @@ export const updateStatus = async (folha, novoStatus, extraData = {}, profile = 
     ...extraData,
   };
 
-  await FolhaMedicao.update(folha.id, payload);
-  return payload;
+  const updatedRecord = await FolhaMedicao.update(folha.id, payload);
+
+  try {
+    const folhaParaNotificacao = { ...folha, ...(updatedRecord || payload) };
+    await notifyFolhaStatusChange({
+      folha: folhaParaNotificacao,
+      novoStatus,
+      context: buildActorContext(profile),
+    });
+  } catch (error) {
+    console.error("[listafolhaRules] Falha ao notificar mudanÃ§a de status", error);
+  }
+
+  return updatedRecord || payload;
 };
 
 export const processarRetorno = async ({ folha, retornoData, profile }) => {
   if (!folha?.id) {
-    throw new Error("Folha inválida para processamento de retorno");
+    throw new Error("Folha invÃ¡lida para processamento de retorno");
   }
+
   const usuario = profile?.full_name || profile?.email || "sistema";
 
   const dataRetorno = {
@@ -90,7 +113,26 @@ export const processarRetorno = async ({ folha, retornoData, profile }) => {
     motivo_reprovacao: retornoData.motivo_reprovacao,
   };
 
+  const numeroFMBase = folha.numero_fm?.includes("-v")
+    ? folha.numero_fm.split("-v")[0]
+    : folha.numero_fm;
+  const novaVersao = (folha.versao || 1) + 1;
+  const novoNumeroFM = `${numeroFMBase}-v${novaVersao}`;
+
   await FolhaMedicao.update(folha.id, reprovacaoDataOriginal);
+
+  try {
+    await notifyFolhaStatusChange({
+      folha: { ...folha, ...reprovacaoDataOriginal },
+      novoStatus: "reprovado",
+      context: {
+        novaFolhaNumero: novoNumeroFM,
+        ...buildActorContext(profile),
+      },
+    });
+  } catch (error) {
+    console.error("[processarRetorno] Falha ao gerar notificaÃ§Ã£o de reprovaÃ§Ã£o", error);
+  }
 
   const historicoCompleto = [
     ...(folha.status_historico || []),
@@ -107,15 +149,9 @@ export const processarRetorno = async ({ folha, retornoData, profile }) => {
       status: "rascunho",
       data: new Date().toISOString(),
       usuario: usuario,
-      observacoes: `Folha de correção criada automaticamente após reprovação da ${folha.numero_fm}`,
+      observacoes: `Folha de correÃ§Ã£o criada automaticamente apÃ³s reprovaÃ§Ã£o da ${folha.numero_fm}`,
     },
   ];
-
-  const numeroFMBase = folha.numero_fm?.includes("-v")
-    ? folha.numero_fm.split("-v")[0]
-    : folha.numero_fm;
-  const novaVersao = (folha.versao || 1) + 1;
-  const novoNumeroFM = `${numeroFMBase}-v${novaVersao}`;
 
   const novaFolhaData = {
     ...folha,
@@ -146,3 +182,4 @@ export const processarRetorno = async ({ folha, retornoData, profile }) => {
     novaFolha,
   };
 };
+
