@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { 
   Files, Mail, Share, AlertOctagon, AlertTriangle, Clock, ShieldCheck, CheckCircle, LayoutGrid, List, 
   FileDown, Eye, Edit, Send, DollarSign, XCircle, LogOut, TrendingUp, TrendingDown, PackagePlus, PackageMinus,
+  ChevronsUpDown, ArrowUp, ArrowDown
 } from "lucide-react";
 import { format, differenceInBusinessDays } from "date-fns";
 import { motion } from "framer-motion";
@@ -61,6 +62,19 @@ const getPrazoInfo = (folha) => {
     icon: Clock,
     text: diasRestantes === 1 ? "Falta 1 dia" : `Faltam ${diasRestantes} dias`,
   };
+};
+
+const getPrazoSortValue = (folha) => {
+  if (!folha || folha.status !== "pendente" || !folha.data_obra) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const obraDate = parseLocalDate(folha.data_obra);
+  if (!obraDate || Number.isNaN(obraDate.getTime())) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const hoje = new Date();
+  const dueDate = addBusinessDays(obraDate, 2);
+  return differenceInBusinessDays(dueDate, hoje);
 };
 
 const NAO_VALIDACAO_MOTIVOS = [
@@ -202,6 +216,7 @@ const ListaFolhas = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [profilesMap, setProfilesMap] = useState({});
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [exportingFolhaId, setExportingFolhaId] = useState(null);
   const [pendingExportFolha, setPendingExportFolha] = useState(null);
   const [exportError, setExportError] = useState(null);
@@ -304,11 +319,61 @@ const ListaFolhas = () => {
     [filteredFolhas.length],
   );
 
+  const sortedFolhas = useMemo(() => {
+    if (!filteredFolhas.length || !sortConfig.key) return filteredFolhas;
+    const sorted = [...filteredFolhas];
+    const { key, direction } = sortConfig;
+
+    const normalize = (folha) => {
+      switch (key) {
+        case "numero_fm":
+          return folha.numero_fm || "";
+        case "projeto":
+          return folha.projeto || "";
+        case "data_obra":
+          return folha.data_obra ? new Date(folha.data_obra).getTime() : 0;
+        case "ordem_servico":
+          return folha.ordem_servico || "";
+        case "tipo_processo":
+          return folha.tipo_processo || "";
+        case "municipio":
+          return folha.municipio || "";
+        case "data_envio":
+          return folha.data_envio ? new Date(folha.data_envio).getTime() : 0;
+        case "data_retorno_distribuidora":
+          return folha.data_retorno_distribuidora
+            ? new Date(folha.data_retorno_distribuidora).getTime()
+            : 0;
+        case "status":
+          return folha.status || "";
+        case "valor_total":
+          return Number(folha.valor_total) || 0;
+        case "prazo":
+          return getPrazoSortValue(folha);
+        case "criado_por":
+          return folha.created_by_name || profilesMap[folha.created_by_user_id] || "";
+        default:
+          return folha[key] || "";
+      }
+    };
+
+    sorted.sort((a, b) => {
+      const aValue = normalize(a);
+      const bValue = normalize(b);
+
+      if (aValue === bValue) return 0;
+      if (aValue > bValue) return direction === "asc" ? 1 : -1;
+      return direction === "asc" ? -1 : 1;
+    });
+
+    return sorted;
+  }, [filteredFolhas, sortConfig, profilesMap]);
+
   const paginatedFolhas = useMemo(() => {
-    if (!filteredFolhas.length) return [];
+    if (!sortedFolhas.length) return [];
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredFolhas.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredFolhas, currentPage]);
+    return sortedFolhas.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [sortedFolhas, currentPage]);
 
   const resumoStatus = useMemo(() => {
     const counters = {
@@ -730,6 +795,45 @@ const ListaFolhas = () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleSort = (columnKey) => {
+    setSortConfig((prev) => {
+      if (prev.key === columnKey) {
+        if (prev.direction === "asc") {
+          return { key: columnKey, direction: "desc" };
+        }
+        return { key: null, direction: "asc" };
+      }
+      return { key: columnKey, direction: "asc" };
+    });
+  };
+
+  const renderSortIcon = (columnKey) => {
+    if (sortConfig.key !== columnKey) {
+      return <ChevronsUpDown className="h-3.5 w-3.5 text-slate-400" />;
+    }
+    if (sortConfig.direction === "asc") {
+      return <ArrowUp className="h-3.5 w-3.5 text-blue-500" />;
+    }
+    return <ArrowDown className="h-3.5 w-3.5 text-blue-500" />;
+  };
+
+  const renderSortableHead = (label, columnKey, widthClass = "") => (
+    <TableHead
+      className={`${widthClass} bg-slate-100/70 text-[11px] font-semibold uppercase tracking-wide text-slate-500`}
+    >
+      <button
+        type="button"
+        onClick={() => handleSort(columnKey)}
+        className="group flex w-full min-h-[34px] items-center justify-between gap-2 rounded-md px-2 py-1 text-left transition-colors hover:bg-slate-200/80 hover:text-slate-900"
+      >
+        <span className="truncate">{label}</span>
+        <span className="flex h-4 w-4 items-center justify-center text-slate-400 group-hover:text-slate-500">
+          {renderSortIcon(columnKey)}
+        </span>
+      </button>
+    </TableHead>
+  );
+
   // Função para drag and drop no Kanban
   const onDragEnd = async (result) => {
     if (!isAdmin) return;
@@ -868,21 +972,23 @@ const ListaFolhas = () => {
             <Card className="shadow-lg border-0">
               <CardContent className="pt-4 px-6">
                 <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-gray-50">
-                      <TableHead className="w-80">Número FM</TableHead>
-                      <TableHead className="w-64">Projeto</TableHead>
-                      <TableHead className="w-64">O.S.</TableHead>
-                      <TableHead className="w-64">Tipo Processo</TableHead>
-                      <TableHead className="w-64">Município</TableHead>
-                      <TableHead className="w-64">Data Obra</TableHead>
-                      <TableHead className="w-64">Data Envio</TableHead>
-                      <TableHead className="w-64">Data Retorno</TableHead>
-                      <TableHead className="w-80">Status</TableHead>
-                      <TableHead className="w-64">Prazo</TableHead>
-                      <TableHead className="w-64">Criado por</TableHead>
-                      <TableHead className="w-32">Valor</TableHead>
-                      <TableHead className="w-48">Ações</TableHead>
+                  <TableHeader className="bg-slate-100/80">
+                    <TableRow>
+                      {renderSortableHead("Número FM", "numero_fm", "w-72")}
+                      {renderSortableHead("Projeto", "projeto", "w-64")}
+                      {renderSortableHead("O.S.", "ordem_servico", "w-56")}
+                      {renderSortableHead("Tipo Processo", "tipo_processo", "w-56")}
+                      {renderSortableHead("Município", "municipio", "w-56")}
+                      {renderSortableHead("Data Obra", "data_obra", "w-56")}
+                      {renderSortableHead("Data Envio", "data_envio", "w-56")}
+                      {renderSortableHead("Data Retorno", "data_retorno_distribuidora", "w-56")}
+                      {renderSortableHead("Status", "status", "w-56")}
+                      {renderSortableHead("Prazo", "prazo", "w-48")}
+                      {renderSortableHead("Criado por", "criado_por", "w-56")}
+                      {renderSortableHead("Valor", "valor_total", "w-32")}
+                      <TableHead className="w-48 bg-slate-100/70 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Ações
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
