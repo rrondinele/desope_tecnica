@@ -445,7 +445,7 @@ const ListaFolhas = () => {
       status: "rascunho",
       data: createdDate || historicoOrdenado[0]?.data || null,
       usuario: creatorIdentifier || historicoOrdenado[0]?.usuario || undefined,
-      observacoes: "Folha criada",
+      observacoes: "Folha de Medição criada",
     };
 
     return [entradaInicial, ...historicoOrdenado];
@@ -863,6 +863,10 @@ const ListaFolhas = () => {
     }
   };
 
+  const toggleViewMode = () => {
+    setViewMode(current => current === "list" ? "kanban" : "list");
+  };
+  
   // Colunas do Kanban
   const kanbanColumns = useMemo(() => {
     return Object.entries(STATUS_CONFIG).map(([statusKey, { label }]) => ({
@@ -893,22 +897,18 @@ const ListaFolhas = () => {
         >
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Lista de Folhas de Medição</h1>
           <div className="flex items-center gap-2">
-            {/* Botões de visualização */}
             <Button 
-              variant={viewMode === "list" ? "default" : "outline"} 
+              variant="outline" 
               size="icon" 
-              onClick={() => setViewMode("list")}
-              title="Visualizar em Lista"
+              onClick={toggleViewMode}
+              title={viewMode === "kanban" ? "Visualizar em Lista" : "Visualizar em Kanban"}
+              className= "bg-black text-white hover:bg-gray-800" 
             >
-              <List className="w-5 h-5"/>
-            </Button>
-            <Button 
-              variant={viewMode === "kanban" ? "default" : "outline"} 
-              size="icon" 
-              onClick={() => setViewMode("kanban")}
-              title="Visualizar em Kanban"
-            >
-              <LayoutGrid className="w-5 h-5"/>
+              {viewMode === "kanban" ? (
+                <List className="w-5 h-5"/>
+              ) : (
+                <LayoutGrid className="w-5 h-5"/>
+              )}
             </Button>
           </div>
         </motion.div>

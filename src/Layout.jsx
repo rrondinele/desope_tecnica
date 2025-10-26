@@ -200,8 +200,18 @@ export default function Layout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isNotificationsOpen]);
 
+  const notificationChannelRef = React.useRef(null);
+
   React.useEffect(() => {
-    if (!currentUserEmail || !supabase) {
+    if (!supabase) {
+      return undefined;
+    }
+
+    if (!currentUserEmail) {
+      if (notificationChannelRef.current) {
+        notificationChannelRef.current.unsubscribe();
+        notificationChannelRef.current = null;
+      }
       return undefined;
     }
 
@@ -219,12 +229,25 @@ export default function Layout() {
           fetchNotifications(true);
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          notificationChannelRef.current = channel;
+        }
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          channel.unsubscribe();
+          if (notificationChannelRef.current === channel) {
+            notificationChannelRef.current = null;
+          }
+        }
+      });
 
     return () => {
-      supabase.removeChannel(channel);
+      channel.unsubscribe();
+      if (notificationChannelRef.current === channel) {
+        notificationChannelRef.current = null;
+      }
     };
-  }, [currentUserEmail, fetchNotifications]);
+  }, [currentUserEmail, fetchNotifications, supabase]);
 
 
   const isEditingFolha = React.useMemo(() => {
