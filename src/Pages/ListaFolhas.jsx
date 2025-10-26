@@ -289,7 +289,7 @@ const ListaFolhas = () => {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (folha) =>
-          folha.numero_fm?.toLowerCase().includes(term) || folha.projeto?.toLowerCase().includes(term),
+          folha.numero_fm?.toLowerCase().includes(term) || folha.projeto?.toLowerCase().includes(term) || folha.ordem_servico?.toLowerCase().includes(term) || folha.municipio?.toLowerCase().includes(term) || folha.created_by_name?.toLowerCase().includes(term),
       );
     }
 
@@ -897,19 +897,20 @@ const ListaFolhas = () => {
         >
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Lista de Folhas de Medição</h1>
           <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={toggleViewMode}
-              title={viewMode === "kanban" ? "Visualizar em Lista" : "Visualizar em Kanban"}
-              className= "bg-black text-white hover:bg-gray-800" 
-            >
-              {viewMode === "kanban" ? (
-                <List className="w-5 h-5"/>
-              ) : (
-                <LayoutGrid className="w-5 h-5"/>
-              )}
-            </Button>
+          <Button 
+            variant={null} 
+            size="icon" 
+            onClick={toggleViewMode}
+            title={viewMode === "kanban" ? "Visualizar em Lista" : "Visualizar em Kanban"}
+            className="bg-black! text-white! hover:bg-gray-800!"
+            style={{ backgroundColor: 'black', color: 'white' }}
+          >
+            {viewMode === "kanban" ? (
+              <List className="w-5 h-5"/>
+            ) : (
+              <LayoutGrid className="w-5 h-5"/>
+            )}
+          </Button>
           </div>
         </motion.div>
 
