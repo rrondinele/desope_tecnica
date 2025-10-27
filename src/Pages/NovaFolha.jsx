@@ -776,6 +776,3 @@ export default function NovaFolha() {
     </div>
   );
 }
-
-
-

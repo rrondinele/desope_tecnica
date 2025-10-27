@@ -975,19 +975,19 @@ const ListaFolhas = () => {
                 <Table>
                   <TableHeader className="bg-slate-100/80">
                     <TableRow>
-                      {renderSortableHead("Número FM", "numero_fm", "w-72")}
-                      {renderSortableHead("Projeto", "projeto", "w-64")}
-                      {renderSortableHead("O.S.", "ordem_servico", "w-56")}
-                      {renderSortableHead("Tipo Processo", "tipo_processo", "w-56")}
-                      {renderSortableHead("Município", "municipio", "w-56")}
-                      {renderSortableHead("Data Obra", "data_obra", "w-56")}
-                      {renderSortableHead("Data Envio", "data_envio", "w-56")}
-                      {renderSortableHead("Data Retorno", "data_retorno_distribuidora", "w-56")}
-                      {renderSortableHead("Status", "status", "w-56")}
-                      {renderSortableHead("Prazo", "prazo", "w-48")}
-                      {renderSortableHead("Criado por", "criado_por", "w-56")}
-                      {renderSortableHead("Valor", "valor_total", "w-32")}
-                      <TableHead className="w-48 bg-slate-100/70 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      {renderSortableHead("Número FM", "numero_fm", "w-72 text-[14px]")}
+                      {renderSortableHead("Projeto", "projeto", "w-64 text-[14px]")}
+                      {renderSortableHead("O.S.", "ordem_servico", "w-56 text-[14px]")}
+                      {renderSortableHead("Tipo Processo", "tipo_processo", "w-56 text-[14px]")}
+                      {renderSortableHead("Município", "municipio", "w-56 text-[14px]")}
+                      {renderSortableHead("Data Obra", "data_obra", "w-56 text-[14px]")}
+                      {renderSortableHead("Data Envio", "data_envio", "w-56 text-[14px]")}
+                      {renderSortableHead("Data Retorno", "data_retorno_distribuidora", "w-56 text-[14px]")}
+                      {renderSortableHead("Status", "status", "w-56 text-[14px]")}
+                      {renderSortableHead("Prazo", "prazo", "w-48 text-[14px]")}
+                      {renderSortableHead("Criado por", "criado_por", "w-56 text-[14px]")}
+                      {renderSortableHead("Valor", "valor_total", "w-32 text-[14px]")}
+                      <TableHead className="w-48 bg-slate-100/70 text-[14px] font-semibold tracking-wide text-slate-500">
                         Ações
                       </TableHead>
                     </TableRow>
